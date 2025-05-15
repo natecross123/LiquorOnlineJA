@@ -1,16 +1,22 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { assets } from '../assets/assets'
 import { useAppContext } from '../context/AppContext'
 
 const Navbar = () => {
     const [open, setOpen] = React.useState(false)
-    const{user, setUser,setshowUserLogin,navigate} = useAppContext()
+    const{user, setUser,setShowUserLogin,navigate, setSearchQuery, searchQuery } = useAppContext()
 
     const logout=async()=>{
         setUser(null);
         navigate('/')
     }
+    useEffect(() => {
+        if (searchQuery.length > 0) {
+            navigate("/products");
+        }
+    }, [searchQuery]);
+    
 
   return (
     <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
@@ -26,7 +32,7 @@ const Navbar = () => {
         <NavLink to= '/'>contact</NavLink>
 
         <div className="hidden lg:flex items-center text-sm gap-2 border border-gray-300 px-3 rounded-full">
-            <input className="py-1.5 w-full bg-transparent outline-none placeholder-gray-500" type="text" placeholder="Search products" />
+            <input onChange={(e)=> setSearchQuery(e.target.value)} className="py-1.5 w-full bg-transparent outline-none placeholder-gray-500" type="text" placeholder="Search products" />
             <img src={assets.search_icon} alt ='search' className='w-4 h-4'/>
 
         </div>
@@ -35,7 +41,7 @@ const Navbar = () => {
             <img src = {assets.nav_cart_icon}alt='cart' className= 'w-6 opacity-80'/>
             <button className="absolute -top-2 -right-3 text-xs text-white bg-primary w-[18px] h-[18px] rounded-full">3</button>
         </div>
-{!user ?( <button onclick={()=> setshowUserLogin(true)} className="cursor-pointer px-8 py-2 bg-primary hover:bg-primary transition text-white rounded-full">
+{!user ?( <button onClick={()=> setShowUserLogin(true)} className="cursor-pointer px-8 py-2 bg-primary hover:bg-primary transition text-white rounded-full">
             Login
         </button>)
         :
@@ -68,7 +74,7 @@ const Navbar = () => {
         {!user ?(
             <button onClick = {()=>{
                 setOpen(false);
-                setshowUserLogin(true);
+                setShowUserLogin(true);
             }} className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-dull transition text-white rounded-full text-sm">
             Login
             </button>
