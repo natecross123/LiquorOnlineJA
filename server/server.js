@@ -2,7 +2,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import 'dotenv/config';
 import express from 'express';
-import connectcCloudinary from './configs/cloudinary.js';
+import connectCloudinary from './configs/cloudinary.js';
 import connectDB from './configs/db.js';
 import addressRouter from './routes/addressRoute.js';
 import cartRouter from './routes/cartRoute.js';
@@ -16,7 +16,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 await connectDB()
-await connectcCloudinary()
+await connectCloudinary()
 
 // Allow multiple Origins
 const allowedOrigins = ['http://localhost:5173']
@@ -24,7 +24,7 @@ const allowedOrigins = ['http://localhost:5173']
 // Middlewear Config
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({origin: allowedOrigins, Credentials: true}));
+app.use(cors({origin: allowedOrigins, credentials: true}));
 
 app.get('/', (req,res) => res.send(" API is Working"))
 app.use('/api/user', userRouter)

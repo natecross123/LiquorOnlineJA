@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react"
-import { assets, dummyAddress } from "../assets/assets"
+import { assets } from "../assets/assets"
 import { useAppContext } from "../context/AppContext"
 
 const Cart = () => {
-    const{products, currency, cartItems, removeFromCart, getCartCount, updateCartItem, navigate, getCartAmount} = useAppContext()
+    const{products, currency, cartItems, removeFromCart, getCartCount, updateCartItem, navigate, getCartAmount, axios, user} = useAppContext()
     const[cartArray, setCartArray] = useState([])
-    const[addresses, setAddresses] = useState(dummyAddress)
+    const[addresses, setAddresses] = useState([])
     const [showAddress, setShowAddress] = useState(false)
-    const [selectedAddress, setselectedAddress] = useState(dummyAddress[0])
+    const [selectedAddress, setselectedAddress] = useState(null)
     const [paymentOption, setPaymentOption] = useState("COD")
 
     const getCart = ()=>{
@@ -18,6 +18,25 @@ const Cart = () => {
             tempArray.push(product)
         }
         setCartArray(tempArray)
+    }
+
+    const getUserAddress = async (params) => {
+        try {
+            const{data} = await axios.get('/api/address/get')
+                if(data.success){
+                    setAddresses(data.addresses)
+                    if(data.addresses.length > 0){
+                        setselectedAddress(data.addresses[0])
+                    }
+
+                }else{
+                    toast.error(data.message)
+                }
+            
+        } catch (error) {
+            toast.error(error.message)
+        }
+        
     }
 
     const placeOrder = async ()=>{
@@ -31,7 +50,11 @@ const Cart = () => {
         }
     },[products, cartItems])
 
-    
+    useEffect(()=>{
+        if(user){
+            getUserAddress()
+        }
+    },[user])
     return products.length > 0 && cartItems ? (
         <div className="flex flex-col md:flex-row mt-16">
             <div className='flex-1 max-w-4xl'>
@@ -89,7 +112,7 @@ const Cart = () => {
                 <div className="mb-6">
                     <p className="text-sm font-medium uppercase">Delivery Address</p>
                     <div className="relative flex justify-between items-start mt-2">
-                        <p className="text-gray-500">{selectedAddress? `${selectedAddress.street}${selectedAddress.city}, ${selectedAddress.state}, ${selectedAddress.country}`:"No address found"}</p>
+                        <p className="text-gray-500">{selectedAddress? `${selectedAddress.street},${selectedAddress.city}, ${selectedAddress.parish}, ${selectedAddress.country}`:"No address found"}</p>
                         <button onClick={() => setShowAddress(!showAddress)} className="text-primary hover:underline cursor-pointer">
                             Change
                         </button>

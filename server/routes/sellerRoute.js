@@ -10,4 +10,4 @@ sellerRouter.get('/logout', sellerLogout);
 
 export default sellerRouter;
 
-
+ 
