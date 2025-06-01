@@ -143,11 +143,11 @@ const removeFromCart = (itemId) => {
         if(user){
             updateCart()
         }
-    },[cartItems])
+    },[cartItems, user])
 
     const value = {navigate, user, setUser, setIsSeller,isSeller,ShowUserLogin,setShowUserLogin,products,currency,addToCart,updateCartItem,removeFromCart
-        , cartItems,searchQuery,setSearchQuery,getCartCount,getCartAmount,axios, fetchProducts
-    }
+        , cartItems,searchQuery,setSearchQuery,getCartCount,getCartAmount,axios, fetchProducts,setCartItems
+}
     return <AppContext.Provider value={value}>
             {children}
         </AppContext.Provider>

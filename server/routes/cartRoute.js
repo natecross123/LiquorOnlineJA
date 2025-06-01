@@ -7,3 +7,4 @@ const cartRouter = express.Router();
 cartRouter.post('/update', authUser, updateCart);
 
 export default cartRouter;
+  
