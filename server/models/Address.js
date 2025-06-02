@@ -10,9 +10,9 @@ const addressSchema = new mongoose.Schema ({
     parish: {type: String, required:true },
     zipcode: {type: Number, required:true },
     country: {type: String, required:true },
-   phone: {type: String, required:true },
+    phone: {type: String, required:true },
 
 })
-const Address = mongoose.models.address || mongoose.model('Address', addressSchema)
+const Address = mongoose.models.address || mongoose.model('address', addressSchema)
 
 export default Address;

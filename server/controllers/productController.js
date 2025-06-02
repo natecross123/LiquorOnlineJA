@@ -4,7 +4,7 @@ import Product from "../models/Product.js";
 
 
 // AddProduct: /api/product/add
-export const addProduct = async(req, res)=> {
+export const addProduct = async(req, res)=> {  
     try {
         let productData = JSON.parse(req.body.productData)
 
@@ -27,47 +27,38 @@ export const addProduct = async(req, res)=> {
     }
 
 }
-// Get Product: /api/product/list?category=Shoes
-export const ProductList = async (req, res) => {
+
+// Get Product : /api/product/list
+export const ProductList = async (req, res)=>{
     try {
-        const { category } = req.query;
-
-        // If a category is provided, filter by it. Otherwise, return all.
-        const filter = category ? { category } : {};
-
-        const products = await Product.find(filter);
-        res.json({ success: true, products });
+        const products = await Product.find({})
+        res.json({success: true, products})
     } catch (error) {
         console.log(error.message);
-        res.json({ success: false, message: error.message });
+        res.json({ success: false, message: error.message })
     }
 }
 
-
-//  Get single Product: /api/product/id
-export const ProductById = async(req, res)=> {
+// Get single Product : /api/product/id
+export const ProductById = async (req, res)=>{
     try {
-        const {id} = req.body
+        const { id } = req.body
         const product = await Product.findById(id)
-        res.json({success:true, product})
-
+        res.json({success: true, product})
     } catch (error) {
         console.log(error.message);
-        res.json({success: false, message: error.message})  
-        
+        res.json({ success: false, message: error.message })
     }
-
 }
 
-// Change Product: /api/product/stock
-export const changeStock = async (req, res) => {
+// Change Product inStock : /api/product/stock
+export const changeStock = async (req, res)=>{
     try {
-      const { id, inStock } = req.body;
-      await Product.findByIdAndUpdate(id, { inStock });
-      res.json({ success: true, message: "Stock updated successfully" });
+        const { id, inStock } = req.body
+        await Product.findByIdAndUpdate(id, {inStock})
+        res.json({success: true, message: "Stock Updated"})
     } catch (error) {
-      console.log(error.message);
-      res.json({ success: false, message: error.message });
+        console.log(error.message);
+        res.json({ success: false, message: error.message })
     }
-  }
-  
+}

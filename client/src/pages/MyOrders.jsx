@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppContext } from '../context/AppContext'
 
 const MyOrders = () => {
@@ -9,7 +9,7 @@ const MyOrders = () => {
 
     const fetchMyOrders = async ()=>{
         try {
-            const { data } = await axios.get(`/api/order/user?userId=${user?._id}`);
+            const { data } = await axios.get(`/api/order/user`);
             if(data.success){
                 setMyOrders(data.orders)
             }

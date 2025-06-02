@@ -6,7 +6,7 @@ import { useAppContext } from "../context/AppContext";
 const Cart = () => {
     const {products, currency, cartItems, removeFromCart, getCartCount, updateCartItem, navigate, getCartAmount, axios, user, setCartItems} = useAppContext()
     const [cartArray, setCartArray] = useState([])
-    const [addresses, setAddresses] = useState([])
+    const [addresses, setAddresses] = useState([]) 
     const [showAddress, setShowAddress] = useState(false)
     const [selectedAddress, setSelectedAddress] = useState(null)
     const [paymentOption, setPaymentOption] = useState("COD")
@@ -45,7 +45,7 @@ const Cart = () => {
             }
 
             // Place Order with COD
-            if(paymentOption === "COD"){
+     if(paymentOption === "COD"){
                 const {data} = await axios.post('/api/order/cod', {
                     userId: user._id,
                     items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})),
@@ -59,20 +59,7 @@ const Cart = () => {
                 }else{
                     toast.error(data.message)
                 }
-            }else{
-                // Place Order with Stripe
-                const {data} = await axios.post('/api/order/stripe', {
-                    userId: user._id,
-                    items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})),
-                    address: selectedAddress._id
-                })
-
-                if(data.success){
-                    window.location.replace(data.url)
-                }else{
-                    toast.error(data.message)
-                }
-            }
+            } 
         } catch (error) {
             toast.error(error.message)
         }
@@ -148,7 +135,7 @@ const Cart = () => {
                 <div className="mb-6">
                     <p className="text-sm font-medium uppercase">Delivery Address</p>
                     <div className="relative flex justify-between items-start mt-2">
-                        <p className="text-gray-500">{selectedAddress ? `${selectedAddress.street}, ${selectedAddress.city}, ${selectedAddress.state}, ${selectedAddress.country}` : "No address found"}</p>
+                        <p className="text-gray-500">{selectedAddress ? `${selectedAddress.street}, ${selectedAddress.city}, ${selectedAddress.parish}, ${selectedAddress.country}` : "No address found"}</p>
                         <button onClick={() => setShowAddress(!showAddress)} className="text-primary hover:underline cursor-pointer">
                             Change
                         </button>
@@ -184,11 +171,11 @@ const Cart = () => {
                         <span>Shipping Fee</span><span className="text-green-600">Free</span>
                     </p>
                     <p className="flex justify-between">
-                        <span>Tax (2%)</span><span>{currency}{getCartAmount() * 2 / 100}</span>
+                        <span>Tax (15%)</span><span>{currency}{getCartAmount() * 15 / 100}</span>
                     </p>
                     <p className="flex justify-between text-lg font-medium mt-3">
                         <span>Total Amount:</span><span>
-                            {currency}{getCartAmount() + getCartAmount() * 2 / 100}</span>
+                            {currency}{getCartAmount() + getCartAmount() * 15 / 100}</span>
                     </p>
                 </div>
 
