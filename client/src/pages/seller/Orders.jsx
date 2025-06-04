@@ -1,75 +1,186 @@
+
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { assets } from '../../assets/assets';
 import { useAppContext } from '../../context/AppContext';
 
 const Orders = () => {
-    const {currency, axios} = useAppContext()
-    const [orders, setOrders] = useState([])
+  const { currency, axios } = useAppContext();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState({});
 
-    const fetchOrders = async () =>{
-        try {
-            const { data } = await axios.get('/api/order/seller');
-            if(data.success){
-                setOrders(data.orders)
-            }else{
-                toast.error(data.message)
-            }
-        } catch (error) {  
-            toast.error(error.message)
-        }
-    };
+  const fetchOrders = async () => {
+    try {
+      const { data } = await axios.get('/api/order/seller');
+      if (data.success) {
+        setOrders(data.orders);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
-
-    useEffect(()=>{
-        fetchOrders();
-    },[])
-
+  const updateOrderStatus = async (orderId, newStatus) => {
+    setLoading(prev => ({ ...prev, [orderId]: true }));
     
+    try {
+      const { data } = await axios.put(`/api/order/status/${orderId}`, {
+        status: newStatus
+      });
+      
+      if (data.success) {
+        toast.success(data.message);
+        // Update the local state
+        setOrders(prevOrders =>
+          prevOrders.map(order =>
+            order._id === orderId
+              ? { ...order, status: newStatus }
+              : order
+          )
+        );
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(prev => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Order Placed':
+        return 'bg-blue-100 text-blue-800';
+      case 'Shipped':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Delivered':
+        return 'bg-green-100 text-green-800';
+      case 'Cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getAvailableActions = (currentStatus) => {
+    switch (currentStatus) {
+      case 'Order Placed':
+        return [
+          { status: 'Shipped', label: 'Mark as Shipped', color: 'bg-yellow-600 hover:bg-yellow-700' }
+        ];
+      case 'Shipped':
+        return [
+          { status: 'Delivered', label: 'Mark as Delivered', color: 'bg-green-600 hover:bg-green-700' }
+        ];
+      case 'Delivered':
+        return [];
+      case 'Cancelled':
+        return [];
+      default:
+        return [];
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
   return (
-    <div className= "no-scrollbar flex-1 h-[95vh] overflow-y-scroll ">
-    <div className="md:p-10 p-4 space-y-4">
-            <h2 className="text-lg font-medium">Orders List</h2>
-            {orders.map((order, index) => (
-                <div key={index} className="flex flex-col  md:items-center md:flex-row gap-5 justify-between p-5 max-w-4xl rounded-md border border-gray-300 ">
-                    <div className="flex gap-5 max-w-80">
-                        <img className="w-12 h-12 object-cover" src={assets.box_icon} alt="boxIcon" />
-                        <div>
-                            {order.items.map((item, index) => (
-                                <div key={index} className="flex flex-col">
-                                    <p className="font-medium">
-                                        {item.product.name}{""}
-                                         <span className="text-primary">x {item.quantity}</span>
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
+    <div className="no-scrollbar flex-1 h-[95vh] overflow-y-scroll">
+      <div className="md:p-10 p-4 space-y-4">
+        <h2 className="text-lg font-medium">Orders List</h2>
+        {orders.map((order, index) => (
+          <div key={index} className="flex flex-col gap-5 p-5 max-w-6xl rounded-md border border-gray-300">
+            
+            {/* Order Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex gap-5 max-w-80">
+                <img className="w-12 h-12 object-cover" src={assets.box_icon} alt="boxIcon" />
+                <div>
+                  {order.items.map((item, index) => (
+                    <div key={index} className="flex flex-col">
+                      <p className="font-medium">
+                        {item.product.name}
+                        <span className="text-primary"> x {item.quantity}</span>
+                      </p>
                     </div>
-
-                    <div className="text-sm md:text-base text-black/60">
-                        <p className='text-black/80'>
-                        {order.address.firstName} {order.address.lastName}</p>
-
-                        <p>{order.address.street}, {order.address.city}</p>
-                        <p> {order.address.state}, {order.address.zipcode}, {order.address.country}</p>
-                        <p></p>
-                        <p>{order.address.phone}</p>
-                    </div>
-
-                    <p className="font-medium text-lg ">{currency}{order.amount}</p>
-
-                    <div className="flex flex-col text-sm">
-                        <p>Method: {order.paymentType}</p>
-                        <p>Date: {new Date (order.createdAt).toLocaleDateString()}</p>
-                        <p>Payment: {order.isPaid ? "Paid" : "Pending"}</p>
-                    </div>
+                  ))}
                 </div>
-            ))}
-        </div>
-        </div>
-  )
-}
+              </div>
+              
+              {/* Order Status Badge */}
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+                  {order.status}
+                </span>
+              </div>
+            </div>
 
-export default Orders
+            {/* Order Details */}
+            <div className="flex flex-col md:flex-row justify-between gap-4">
+              <div className="text-sm md:text-base text-black/60">
+                <p className="text-black/80">
+                  {order.address.firstName} {order.address.lastName}
+                </p>
+                <p>{order.address.street}, {order.address.city}</p>
+                <p>{order.address.state}, {order.address.zipcode}, {order.address.country}</p>
+                <p>{order.address.phone}</p>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <p className="font-medium text-lg">{currency}{order.amount}</p>
+                <div className="flex flex-col text-sm">
+                  <p>Method: {order.paymentType}</p>
+                  <p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+                  <p>Payment: {order.isPaid ? "Paid" : "Pending"}</p>
+                </div>
+              </div>
+            </div>
 
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
+              {getAvailableActions(order.status).map((action, actionIndex) => (
+                <button
+                  key={actionIndex}
+                  onClick={() => updateOrderStatus(order._id, action.status)}
+                  disabled={loading[order._id]}
+                  className={`
+                    px-4 py-2 text-white text-sm rounded-md font-medium
+                    ${action.color}
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    transition-colors duration-200
+                  `}
+                >
+                  {loading[order._id] ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Updating...
+                    </div>
+                  ) : (
+                    action.label
+                  )}
+                </button>
+              ))}
+              
+              {/* Cancel Button - only show for non-delivered/non-cancelled orders */}
+              {!['Delivered', 'Cancelled'].includes(order.status) && (
+                <button
+                  onClick={() => updateOrderStatus(order._id, 'Cancelled')}
+                  disabled={loading[order._id]}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                >
+                  {loading[order._id] ? 'Updating...' : 'Cancel Order'}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
+export default Orders;

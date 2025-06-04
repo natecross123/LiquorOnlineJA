@@ -1,4 +1,3 @@
-// controllers/orderController.js (updated)
 
 import stripe from "stripe";
 import Order from "../models/Order.js";
@@ -136,7 +135,7 @@ export const stripeWebhooks = async (request, response) => {
       // Mark Order as paid
       await Order.findByIdAndUpdate(orderId, { isPaid: true });
 
-      // Clear the user’s cart
+      // Clear the user's cart
       await User.findByIdAndUpdate(userId, { cartItems: {} });
       break;
     }
@@ -158,6 +157,49 @@ export const stripeWebhooks = async (request, response) => {
   }
 
   response.json({ received: true });
+};
+
+// Update Order Status: PUT /api/order/status/:orderId
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    // Validate status values
+    const validStatuses = ['Order Placed', 'Shipped', 'Delivered', 'Cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.json({ 
+        success: false, 
+        message: "Invalid status. Valid statuses are: " + validStatuses.join(', ') 
+      });
+    }
+
+    // Find and update the order
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      { 
+        status,
+        ...(status === 'Shipped' && { shippedAt: new Date() }),
+        ...(status === 'Delivered' && { deliveredAt: new Date() })
+      },
+      { new: true }
+    ).populate('userId', 'name email');
+
+    if (!order) {
+      return res.json({ success: false, message: "Order not found" });
+    }
+
+    // Here you could add email notification logic
+    // sendOrderStatusEmail(order.userId.email, order, status);
+
+    return res.json({ 
+      success: true, 
+      message: `Order status updated to ${status}`,
+      order 
+    });
+  } catch (error) {
+    return res.json({ success: false, message: error.message });
+  }
 };
 
 // Get Orders by User ID : GET /api/order/user
