@@ -70,6 +70,11 @@ import whole_wheat_bread_image from "./whole_wheat_bread_image.png";
 import yippee_image from "./yippee_image.png";
 import wine_assets from "./wine_asset.png";
 import rum_assets from "./rum_asset.png";
+import tequila_assets from "./tequila_asset.png";
+import whisky_assets from "./whisky_asset.png";
+import soda_assets from "./soda_asset.png";
+import beer_assets from "./beer_asset.png";
+import vodka_assets from "./vodka_asset.png";
 
 
 
@@ -103,19 +108,24 @@ export const assets = {
   box_icon,
   wine_assets,
   rum_assets,
+  tequila_assets,
+  whisky_assets,
+  soda_assets,
+  vodka_assets,
+  beer_assets,
 };
 
 export const categories = [
   {
-    text: "Organic veggies",
-    path: "Vegetables",
-    image: organic_vegitable_image,
+    text: "Soft Drinks",
+    path: "Soft Drinks",
+    image: soda_assets,
     bgColor: "#28282B",
   },
   {
-    text: "Fresh Fruits",
-    path: "Fruits",
-    image: fresh_fruits_image,
+    text: "Vodka",
+    path: "Vodka",
+    image:tequila_assets,
     bgColor: "#28282B",
   },
   {
@@ -131,21 +141,21 @@ export const categories = [
     bgColor: "#28282B",
   },
   {
-    text: "Dairy Products",
-    path: "Dairy",
-    image: dairy_product_image,
+    text: "Beer",
+    path: "Beer",
+    image: beer_assets,
     bgColor: "#28282B",
   },
   {
-    text: "Bakery & Breads",
-    path: "Bakery",
-    image: bakery_image,
+    text: "Whiskey",
+    path: "Whiskey",
+    image: whisky_assets,
     bgColor: "#28282B",
   },
   {
-    text: "Grains & Cereals",
-    path: "Grains",
-    image: grain_image,
+    text: "Tequila",
+    path: "Tequila",
+    image: vodka_assets,
     bgColor: "#28282B",
   },
 ];
