@@ -13,7 +13,7 @@ import userRouter from './routes/userRoute.js';
 
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 4000;
 
 await connectDB()
 await connectCloudinary()
@@ -36,7 +36,5 @@ app.use('/api/order', orderRouter)
 
 
 app.listen(port, ()=>{
-    app.listen(port,()=>{
         console.log(`Server is running on http://localhost:${port} `)
     })
-}) 
