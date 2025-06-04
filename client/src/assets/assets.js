@@ -8,7 +8,6 @@ import banana_image_1 from "./banana_image_1.png";
 import barley_image from "./barley_image.png";
 import basmati_rice_image from "./basmati_rice_image.png";
 import black_arrow_icon from "./black_arrow_icon.svg";
-import bottles_image from "./bottles_image.png";
 import bottom_banner_image from "./bottom_banner_image.png";
 import bottom_banner_image_sm from "./bottom_banner_image_sm.png";
 import box_icon from "./box_icon.svg";
@@ -69,6 +68,10 @@ import wheat_flour_image from "./wheat_flour_image.png";
 import white_arrow_icon from "./white_arrow_icon.svg";
 import whole_wheat_bread_image from "./whole_wheat_bread_image.png";
 import yippee_image from "./yippee_image.png";
+import wine_assets from "./wine_asset.png";
+import rum_assets from "./rum_asset.png";
+
+
 
 export const assets = {
   logo,
@@ -98,6 +101,8 @@ export const assets = {
   bottom_banner_image_sm,
   add_address_iamge,
   box_icon,
+  wine_assets,
+  rum_assets,
 };
 
 export const categories = [
@@ -105,43 +110,43 @@ export const categories = [
     text: "Organic veggies",
     path: "Vegetables",
     image: organic_vegitable_image,
-    bgColor: "#FEF6DA",
+    bgColor: "#28282B",
   },
   {
     text: "Fresh Fruits",
     path: "Fruits",
     image: fresh_fruits_image,
-    bgColor: "#FEE0E0",
+    bgColor: "#28282B",
   },
   {
-    text: "Cold Drinks",
-    path: "Drinks",
-    image: bottles_image,
-    bgColor: "#F0F5DE",
+    text: "Wines",
+    path: "Wines",
+    image: wine_assets,
+    bgColor: "#28282B",
   },
   {
-    text: "Instant Food",
-    path: "Instant",
-    image: maggi_image,
-    bgColor: "#E1F5EC",
+    text: "Rum",
+    path: "Rum",
+    image: rum_assets,
+    bgColor: "#28282B",
   },
   {
     text: "Dairy Products",
     path: "Dairy",
     image: dairy_product_image,
-    bgColor: "#FEE6CD",
+    bgColor: "#28282B",
   },
   {
     text: "Bakery & Breads",
     path: "Bakery",
     image: bakery_image,
-    bgColor: "#E0F6FE",
+    bgColor: "#28282B",
   },
   {
     text: "Grains & Cereals",
     path: "Grains",
     image: grain_image,
-    bgColor: "#F1E3F9",
+    bgColor: "#28282B",
   },
 ];
 

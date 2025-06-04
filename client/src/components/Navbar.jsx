@@ -20,7 +20,7 @@ const Navbar = () => {
                 toast.error(data.message)
             }
         } catch (error) {
-            toast.error(data.message)
+            toast.error(error.response?.data?.message || "An error occurred during logout");
         }
         setUser(null);
         navigate('/')
@@ -29,7 +29,7 @@ const Navbar = () => {
         if (searchQuery.length > 0) {
             navigate("/products");
         }
-    }, [searchQuery]);
+    }, [searchQuery, navigate]);
     
 
   return (
