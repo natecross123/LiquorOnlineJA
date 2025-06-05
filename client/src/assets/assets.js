@@ -20,7 +20,6 @@ import cheese_image from "./cheese_image.png";
 import chocolate_cake_image from "./chocolate_cake_image.png";
 import coca_cola_image from "./coca_cola_image.png";
 import coin_icon from "./coin_icon.svg";
-import dairy_product_image from "./dairy_product_image.png";
 import delivery_truck_icon from "./delivery_truck_icon.svg";
 import eggs_image from "./eggs_image.png";
 import fanta_image_1 from "./fanta_image_1.png";
@@ -196,17 +195,17 @@ export const features = [
   {
     icon: delivery_truck_icon,
     title: "Fastest Delivery",
-    description: "Groceries delivered in under 1 hour.",
+    description: "Liquor delivered in under 1 hour.",
   },
   {
     icon: leaf_icon,
-    title: "Freshness Guaranteed",
-    description: "Fresh produce straight from the source.",
+    title: "Quality Guaranteed",
+    description: "Best liquor straight from the source.",
   },
   {
     icon: coin_icon,
     title: "Affordable Prices",
-    description: "Quality groceries at unbeatable prices.",
+    description: "Quality liquor at unbeatable prices.",
   },
   {
     icon: trust_icon,
