@@ -1,4 +1,3 @@
-
 import stripe from "stripe";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
@@ -210,15 +209,39 @@ export const getUserOrders = async (req, res) => {
     if (!userId) {
       return res.json({ success: false, message: "Not authorized" });
     }
+
     const orders = await Order.find({
       userId,
       $or: [{ paymentType: "COD" }, { isPaid: true }],
     })
-      .populate("items.product address")
+      .populate({
+        path: "items.product",
+        match: { _id: { $exists: true } }, // Only populate if product exists
+        select: "name category image offerPrice" // Only select needed fields
+      })
+      .populate("address")
       .sort({ createdAt: -1 });
 
-    return res.json({ success: true, orders });
+    // Filter out orders where all products are null and clean up items
+    const filteredOrders = orders
+      .map(order => {
+        // Filter out items with null products
+        const validItems = order.items.filter(item => item.product !== null);
+        
+        if (validItems.length === 0) {
+          return null; // Mark order for removal if no valid items
+        }
+        
+        return {
+          ...order.toObject(),
+          items: validItems
+        };
+      })
+      .filter(order => order !== null); // Remove orders with no valid items
+
+    return res.json({ success: true, orders: filteredOrders });
   } catch (error) {
+    console.error("Error fetching user orders:", error);
     return res.json({ success: false, message: error.message });
   }
 };
@@ -229,11 +252,34 @@ export const getAllOrders = async (req, res) => {
     const orders = await Order.find({
       $or: [{ paymentType: "COD" }, { isPaid: true }],
     })
-      .populate("items.product address")
+      .populate({
+        path: "items.product",
+        match: { _id: { $exists: true } }, // Only populate if product exists
+        select: "name category image offerPrice" // Only select needed fields
+      })
+      .populate("address")
       .sort({ createdAt: -1 });
 
-    return res.json({ success: true, orders });
+    // Filter out orders where all products are null and clean up items
+    const filteredOrders = orders
+      .map(order => {
+        // Filter out items with null products
+        const validItems = order.items.filter(item => item.product !== null);
+        
+        if (validItems.length === 0) {
+          return null; // Mark order for removal if no valid items
+        }
+        
+        return {
+          ...order.toObject(),
+          items: validItems
+        };
+      })
+      .filter(order => order !== null); // Remove orders with no valid items
+
+    return res.json({ success: true, orders: filteredOrders });
   } catch (error) {
+    console.error("Error fetching all orders:", error);
     return res.json({ success: false, message: error.message });
   }
 };

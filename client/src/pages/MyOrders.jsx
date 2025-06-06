@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 
@@ -10,7 +9,13 @@ const MyOrders = () => {
     try {
       const { data } = await axios.get(`/api/order/user`);
       if (data.success) {
-        setMyOrders(data.orders);
+        // Filter out items with null/undefined products
+        const ordersWithValidItems = data.orders.map(order => ({
+          ...order,
+          items: order.items.filter(item => item.product && item.product._id)
+        })).filter(order => order.items.length > 0); // Remove orders with no valid items
+        
+        setMyOrders(ordersWithValidItems);
       }
     } catch (error) {
       console.log(error);
@@ -53,6 +58,21 @@ const MyOrders = () => {
       current: index === currentStepIndex
     }));
   };
+
+  // Show message if no orders
+  if (myOrders.length === 0) {
+    return (
+      <div className="mt-16 pb-16">
+        <div className="flex flex-col items-end w-max mb-8">
+          <p className="text-2xl font-medium uppercase">My orders</p>
+          <div className="w-16 h-0.5 bg-primary rounded-full"></div>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">No orders found</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-16 pb-16">
@@ -111,45 +131,65 @@ const MyOrders = () => {
           </div>
 
           {/* Order Items */}
-          {order.items.map((item, itemIndex) => (
-            <div
-              key={itemIndex}
-              className={`relative bg-white text-gray-500/70 ${
-                order.items.length !== itemIndex + 1 && "border-b"
-              } border-gray-300 flex flex-col md:flex-row md:items-center justify-between p-4 py-5 md:gap-16 w-full max-w-4xl`}
-            >
-              <div className="flex items-center mb-4 md:mb-0">
-                <div className="bg-primary/10 p-4 rounded-lg">
-                  <img src={item.product.image[0]} alt="" className="w-16 h-16" />
+          {order.items.map((item, itemIndex) => {
+            // Additional safety check for individual items
+            if (!item.product || !item.product._id) {
+              return (
+                <div key={itemIndex} className="bg-red-50 border border-red-200 rounded p-4 mb-4">
+                  <p className="text-red-600">Product information unavailable (possibly deleted)</p>
                 </div>
-                <div className="ml-4">
-                  <h2 className="text-xl font-medium text-gray-800">{item.product.name}</h2>
-                  <p>Category: {item.product.category}</p>
+              );
+            }
+
+            return (
+              <div
+                key={itemIndex}
+                className={`relative bg-white text-gray-500/70 ${
+                  order.items.length !== itemIndex + 1 && "border-b"
+                } border-gray-300 flex flex-col md:flex-row md:items-center justify-between p-4 py-5 md:gap-16 w-full max-w-4xl`}
+              >
+                <div className="flex items-center mb-4 md:mb-0">
+                  <div className="bg-primary/10 p-4 rounded-lg">
+                    <img 
+                      src={item.product.image?.[0] || '/placeholder-image.jpg'} 
+                      alt={item.product.name || 'Product'} 
+                      className="w-16 h-16 object-cover" 
+                      onError={(e) => {
+                        e.target.src = '/placeholder-image.jpg';
+                      }}
+                    />
+                  </div>
+                  <div className="ml-4">
+                    <h2 className="text-xl font-medium text-gray-800">
+                      {item.product.name || 'Product Name Unavailable'}
+                    </h2>
+                    <p>Category: {item.product.category || 'Unknown'}</p>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex flex-col justify-center md:ml-8 mb-4 md:mb-0">
-                <p>Quantity: {item.quantity || "1"}</p>
-                <p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
                 
-                {/* Show delivery dates if available */}
-                {order.shippedAt && (
-                  <p className="text-sm text-yellow-600">
-                    Shipped: {new Date(order.shippedAt).toLocaleDateString()}
-                  </p>
-                )}
-                {order.deliveredAt && (
-                  <p className="text-sm text-green-600">
-                    Delivered: {new Date(order.deliveredAt).toLocaleDateString()}
-                  </p>
-                )}
+                <div className="flex flex-col justify-center md:ml-8 mb-4 md:mb-0">
+                  <p>Quantity: {item.quantity || "1"}</p>
+                  <p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+                  
+                  {/* Show delivery dates if available */}
+                  {order.shippedAt && (
+                    <p className="text-sm text-yellow-600">
+                      Shipped: {new Date(order.shippedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                  {order.deliveredAt && (
+                    <p className="text-sm text-green-600">
+                      Delivered: {new Date(order.deliveredAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+                
+                <p className="text-primary text-lg font-medium">
+                  Amount: {currency}{(item.product.offerPrice || 0) * (item.quantity || 1)}
+                </p>
               </div>
-              
-              <p className="text-primary text-lg font-medium">
-                Amount: {currency}{item.product.offerPrice * item.quantity}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ))}
     </div>

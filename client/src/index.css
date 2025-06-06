@@ -7,10 +7,13 @@
 }
 
 @theme{
-  --color-primary: #5a85b6;
-  --color-primary-dull: #44a67c;
+  --color-primary: #333333;
+  --color-primary-dull: #9B1B30;
 }
 
 .no-scrollbar::-webkit-scrollbar{
   display:none;
+}
+body {
+  background-color: var(--color-background);
 }
