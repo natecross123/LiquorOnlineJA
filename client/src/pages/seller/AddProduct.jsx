@@ -21,8 +21,10 @@ const AddProduct = () => {
                 name,
                 description: description.split('/n'),
                 category,
-                price,
-                offerPrice
+                // Only include price if it has a value
+                ...(price && { price: parseFloat(price) }),
+                // Only include offerPrice if it has a value
+                ...(offerPrice && { offerPrice: parseFloat(offerPrice) })
             }
             const formData = new FormData();
             formData.append('productData', JSON.stringify(productData));
@@ -45,7 +47,8 @@ const AddProduct = () => {
             }
                 
         } catch (error) {
-            toast.error(data.message)
+            console.error('Error adding product:', error);
+            toast.error(error.response?.data?.message || error.message || 'Failed to add product');
         }
        
     }
@@ -93,14 +96,14 @@ const AddProduct = () => {
                 </div>
                 <div className="flex items-center gap-5 flex-wrap">
                     <div className="flex-1 flex flex-col gap-1 w-32">
-                        <label className="text-base font-medium" htmlFor="product-price">Product Price</label>
+                        <label className="text-base font-medium" htmlFor="product-price">Product Price (Optional)</label>
                         <input onChange={(e)=> setPrice(e.target.value)} value={price}
-                        id="product-price" type="number" placeholder="0" className="outline-none md:py-2.5 py-2 px-3 rounded border border-gray-500/40" required />
+                        id="product-price" type="number" placeholder="0" className="outline-none md:py-2.5 py-2 px-3 rounded border border-gray-500/40" />
                     </div>
                     <div className="flex-1 flex flex-col gap-1 w-32">
-                        <label className="text-base font-medium" htmlFor="offer-price">Offer Price</label>
+                        <label className="text-base font-medium" htmlFor="offer-price">Offer Price (Optional)</label>
                         <input onChange={(e)=> setOfferPrice(e.target.value)} value={offerPrice}
-                         id="offer-price" type="number" placeholder="0" className="outline-none md:py-2.5 py-2 px-3 rounded border border-gray-500/40" required />
+                         id="offer-price" type="number" placeholder="0" className="outline-none md:py-2.5 py-2 px-3 rounded border border-gray-500/40" />
                     </div>
                 </div>
                 <button className="px-8 py-2.5 bg-primary text-white font-medium rounded cursor-pointer">ADD</button>

@@ -3,7 +3,6 @@ import add_icon from "./add_icon.svg";
 import amul_milk_image from "./amul_milk_image.png";
 import apple_image from "./apple_image.png";
 import arrow_right_icon_colored from "./arrow_right_icon_colored.svg";
-import bakery_image from "./bakery_image.png";
 import banana_image_1 from "./banana_image_1.png";
 import barley_image from "./barley_image.png";
 import basmati_rice_image from "./basmati_rice_image.png";
@@ -23,8 +22,6 @@ import coin_icon from "./coin_icon.svg";
 import delivery_truck_icon from "./delivery_truck_icon.svg";
 import eggs_image from "./eggs_image.png";
 import fanta_image_1 from "./fanta_image_1.png";
-import fresh_fruits_image from "./fresh_fruits_image.png";
-import grain_image from "./grain_image.png";
 import grapes_image_1 from "./grapes_image_1.png";
 import knorr_soup_image from "./knorr_soup_image.png";
 import leaf_icon from "./leaf_icon.svg";
@@ -39,7 +36,6 @@ import nav_cart_icon from "./nav_cart_icon.svg";
 import onion_image_1 from "./onion_image_1.png";
 import orange_image from "./orange_image.png";
 import order_icon from "./order_icon.svg";
-import organic_vegitable_image from "./organic_vegitable_image.png";
 import paneer_image from "./paneer_image.png";
 import paneer_image_2 from "./paneer_image_2.png";
 import pepsi_image from "./pepsi_image.png";
@@ -74,7 +70,7 @@ import whisky_assets from "./whisky_asset.png";
 import soda_assets from "./soda_asset.png";
 import beer_assets from "./beer_asset.png";
 import vodka_assets from "./vodka_asset.png";
-
+import LogoJA from "./LogoJA.svg";
 
 
 export const assets = {
@@ -112,6 +108,7 @@ export const assets = {
   soda_assets,
   vodka_assets,
   beer_assets,
+  LogoJA,
 };
 
 export const categories = [

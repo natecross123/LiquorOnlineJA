@@ -188,7 +188,7 @@ export const updateOrderStatus = async (req, res) => {
       return res.json({ success: false, message: "Order not found" });
     }
 
-    // Here you could add email notification logic
+    // Here maybe add email notification logic
     // sendOrderStatusEmail(order.userId.email, order, status);
 
     return res.json({ 
