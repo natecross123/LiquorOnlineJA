@@ -33,11 +33,13 @@ const Navbar = () => {
     
 
   return (
-    <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
+   <nav className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 xl:px-8 py-1.5 border-b border-gray-300 bg-white relative transition-all">
 
-    <NavLink to='/' onClick={() => setOpen(false)} className="mr-auto -ml-3 md:-ml-5 lg:-ml-6">
-    <img className="h-20" src={assets.LogoJA} alt="logo" /> 
+
+    <NavLink to='/' onClick={()=> setOpen(false)} className="ml-0">
+    <img className="h-18 object-contain" src={assets.LogoJA} alt="logo" />
     </NavLink>
+
 
 
     {/* Desktop Menu */}
