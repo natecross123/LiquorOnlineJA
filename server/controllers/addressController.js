@@ -5,9 +5,11 @@ export const addAddress = async (req, res) => {
   try {
     const { address } = req.body;
     const userId = req.userId;
+
     if (!address || !userId) {
       return res.json({ success: false, message: "Missing address or userId" });
     }
+
     await Address.create({ ...address, userId });
     return res.json({ success: true, message: "Address added successfully" });
   } catch (error) {
@@ -16,18 +18,24 @@ export const addAddress = async (req, res) => {
   }
 };
 
-
 // Get Address : GET /api/address/get
 export const getAddress = async (req, res) => {
   try {
     const userId = req.userId;
+
     if (!userId) {
       return res.json({ success: false, message: "Not authorized" });
     }
-    const addresses = await Address.find({ userId });
+
+    const addresses = await Address.findAll({ 
+      where: { userId },
+      order: [['createdAt', 'DESC']]
+    });
+
     return res.json({ success: true, addresses });
   } catch (error) {
     console.log(error.message);
     return res.json({ success: false, message: error.message });
   }
 };
+

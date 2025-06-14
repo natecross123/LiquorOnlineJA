@@ -8,5 +8,3 @@ addressRouter.post('/add', authUser, addAddress);
 addressRouter.get('/get', authUser, getAddress);
 
 export default addressRouter;
-
-  

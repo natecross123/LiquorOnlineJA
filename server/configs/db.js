@@ -4,7 +4,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL || process.env.POSTGRES
   dialect: 'postgres',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {
-    max: 10,
+    max: 10, 
     min: 0,
     acquire: 30000,
     idle: 10000,
@@ -35,4 +35,4 @@ const connectDB = async () => {
 };
 
 export { sequelize, connectDB };
-export default connectDB;
+export default connectDB;  

@@ -1,285 +1,511 @@
 import stripe from "stripe";
+import { Op } from "sequelize"; // Import Op for Sequelize operators
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import Address from "../models/Address.js";
 
-// Place Order COD : POST /api/order/cod
+
 export const placeOrderCOD = async (req, res) => {
-  try {
-    const { items, address } = req.body;
-    const userId = req.userId;
+    try {
+        const { items, addressId } = req.body;
+        const userId = req.userId;
 
-    if (!userId || !address || !Array.isArray(items) || items.length === 0) {
-      return res.json({ success: false, message: "Invalid data" });
+        // Validate required fields
+        if (!userId || !addressId || !Array.isArray(items) || items.length === 0) {
+            return res.json({ 
+                success: false, 
+                message: "Invalid data. Please provide items and address." 
+            });
+        }
+
+        // Verify address belongs to user
+        const address = await Address.findOne({
+            where: { id: addressId, userId }
+        });
+
+        if (!address) {
+            return res.json({ 
+                success: false, 
+                message: "Address not found or unauthorized" 
+            });
+        }
+
+        // Calculate total amount
+        let amount = 0;
+        for (const item of items) {
+            const product = await Product.findByPk(item.product);
+            if (!product) {
+                return res.json({ 
+                    success: false, 
+                    message: `Product with ID ${item.product} not found` 
+                });
+            }
+            amount += product.offerPrice * item.quantity;
+        }
+
+        // Add 15% tax
+        amount += Math.floor(amount * 0.15);
+
+        // Create order
+        const order = await Order.create({
+            userId,
+            items,
+            amount,
+            addressId,
+            paymentType: "COD",
+        });
+
+        return res.json({ 
+            success: true, 
+            message: "Order placed successfully",
+            orderId: order.id
+        });
+
+    } catch (error) {
+        console.error("COD order error:", error.message);
+        return res.json({ 
+            success: false, 
+            message: "Failed to place order. Please try again." 
+        });
     }
-
-    // 3) Calculate amount
-    let amount = await items.reduce(async (accPromise, item) => {
-      const acc = await accPromise;
-      const product = await Product.findById(item.product);
-      return acc + product.offerPrice * item.quantity;
-    }, Promise.resolve(0));
-    amount += Math.floor(amount * 0.15);
-
-    await Order.create({
-      userId,
-      items,
-      amount,
-      address,
-      paymentType: "COD",
-    });
-
-    return res.json({ success: true, message: "Order Placed Successfully" });
-  } catch (error) {
-    return res.json({ success: false, message: error.message });
-  }
 };
 
-// Place Order Stripe : POST /api/order/stripe
+/**
+ * Place Order with Stripe Payment
+ * Route: POST /api/order/stripe
+ * Access: Private (requires authentication)
+ */
 export const placeOrderStripe = async (req, res) => {
-  try {
-    // 1) Read only items + address from the JSON body
-    const { items, address } = req.body;
-    const userId = req.userId;
-    const { origin } = req.headers;
+    try {
+        const { items, addressId } = req.body;
+        const userId = req.userId;
+        const { origin } = req.headers;
 
-    if (!userId || !address || !Array.isArray(items) || items.length === 0) {
-      return res.json({ success: false, message: "Invalid data" });
+        // Validate required fields
+        if (!userId || !addressId || !Array.isArray(items) || items.length === 0) {
+            return res.json({ 
+                success: false, 
+                message: "Invalid data. Please provide items and address." 
+            });
+        }
+
+        // Verify address belongs to user
+        const address = await Address.findOne({
+            where: { id: addressId, userId }
+        });
+
+        if (!address) {
+            return res.json({ 
+                success: false, 
+                message: "Address not found or unauthorized" 
+            });
+        }
+
+        // Gather product details and calculate amount
+        let productData = [];
+        let amount = 0;
+
+        for (const item of items) {
+            const product = await Product.findByPk(item.product);
+            if (!product) {
+                return res.json({ 
+                    success: false, 
+                    message: `Product with ID ${item.product} not found` 
+                });
+            }
+
+            productData.push({
+                name: product.name,
+                price: product.offerPrice,
+                quantity: item.quantity,
+            });
+            
+            amount += product.offerPrice * item.quantity;
+        }
+
+        // Add 15% tax
+        amount += Math.floor(amount * 0.15);
+
+        // Create order record with paymentType: "Online"
+        const order = await Order.create({
+            userId,
+            items,
+            amount,
+            addressId,
+            paymentType: "Online",
+        });
+
+        // Initialize Stripe
+        const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+
+        // Build line_items for Stripe Checkout
+        const line_items = productData.map((p) => ({
+            price_data: {
+                currency: "usd",
+                product_data: { name: p.name },
+                unit_amount: Math.floor(p.price + p.price * 0.02) * 100,
+            },
+            quantity: p.quantity,
+        }));
+
+        // Create Stripe session
+        const session = await stripeInstance.checkout.sessions.create({
+            line_items,
+            mode: "payment",
+            success_url: `${origin}/loader?next=my-orders`,
+            cancel_url: `${origin}/cart`,
+            metadata: {
+                orderId: order.id.toString(),
+                userId: userId.toString(),
+            },
+        });
+
+        return res.json({ 
+            success: true, 
+            url: session.url 
+        });
+
+    } catch (error) {
+        console.error("Stripe order error:", error.message);
+        return res.json({ 
+            success: false, 
+            message: "Failed to create payment session. Please try again." 
+        });
     }
-
-    // 2) Gather product details & calculate amount
-    let productData = [];
-    let amount = await items.reduce(async (accPromise, item) => {
-      const acc = await accPromise;
-      const product = await Product.findById(item.product);
-      productData.push({
-        name: product.name,
-        price: product.offerPrice,
-        quantity: item.quantity,
-      });
-      return acc + product.offerPrice * item.quantity;
-    }, Promise.resolve(0));
-
-    // 3) Add 15% tax
-    amount += Math.floor(amount * 0.15);
-
-    // 4) Create order record with `paymentType: "Online"`
-    const order = await Order.create({
-      userId,
-      items,
-      amount,
-      address,
-      paymentType: "Online",
-    });
-
-    // 5) Initialize Stripe
-    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-
-    // 6) Build line_items for Stripe Checkout
-    const line_items = productData.map((p) => ({
-      price_data: {
-        currency: "usd",
-        product_data: { name: p.name },
-        unit_amount: Math.floor(p.price + p.price * 0.02) * 100,
-      },
-      quantity: p.quantity,
-    }));
-
-    // 7) Create a Stripe session
-    const session = await stripeInstance.checkout.sessions.create({
-      line_items,
-      mode: "payment",
-      success_url: `${origin}/loader?next=my-orders`,
-      cancel_url: `${origin}/cart`,
-      metadata: {
-        orderId: order._id.toString(),
-        userId,
-      },
-    });
-
-    return res.json({ success: true, url: session.url });
-  } catch (error) {
-    return res.json({ success: false, message: error.message });
-  }
 };
 
-// Stripe Webhooks to Verify Payments : POST /stripe
+/**
+ * Stripe Webhooks to Verify Payments
+ * Route: POST /stripe
+ * Access: Public (Stripe webhook)
+ */
 export const stripeWebhooks = async (request, response) => {
-  const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-  const sig = request.headers["stripe-signature"];
-  let event;
+    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+    const sig = request.headers["stripe-signature"];
+    let event;
 
-  try {
-    // Verify signature & parse event
-    event = stripeInstance.webhooks.constructEvent(
-      request.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    return response.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  switch (event.type) {
-    case "payment_intent.succeeded": {
-      const paymentIntent = event.data.object;
-      const paymentIntentId = paymentIntent.id;
-
-      // Retrieve the session to get metadata (orderId & userId)
-      const session = await stripeInstance.checkout.sessions.list({
-        payment_intent: paymentIntentId,
-      });
-      const { orderId, userId } = session.data[0].metadata;
-
-      // Mark Order as paid
-      await Order.findByIdAndUpdate(orderId, { isPaid: true });
-
-      // Clear the user's cart
-      await User.findByIdAndUpdate(userId, { cartItems: {} });
-      break;
+    try {
+        // Verify signature & parse event
+        event = stripeInstance.webhooks.constructEvent(
+            request.body,
+            sig,
+            process.env.STRIPE_WEBHOOK_SECRET
+        );
+    } catch (err) {
+        console.error("Webhook signature verification failed:", err.message);
+        return response.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    case "payment_intent.payment_failed": {
-      const paymentIntent = event.data.object;
-      const paymentIntentId = paymentIntent.id;
-      const session = await stripeInstance.checkout.sessions.list({
-        payment_intent: paymentIntentId,
-      });
-      const { orderId } = session.data[0].metadata;
-      await Order.findByIdAndDelete(orderId);
-      break;
+    try {
+        switch (event.type) {
+            case "payment_intent.succeeded": {
+                const paymentIntent = event.data.object;
+                const paymentIntentId = paymentIntent.id;
+
+                // Retrieve the session to get metadata (orderId & userId)
+                const sessions = await stripeInstance.checkout.sessions.list({
+                    payment_intent: paymentIntentId,
+                });
+
+                if (sessions.data.length > 0) {
+                    const { orderId, userId } = sessions.data[0].metadata;
+
+                    // Mark Order as paid
+                    await Order.update(
+                        { isPaid: true },
+                        { where: { id: orderId } }
+                    );
+
+                    // Clear the user's cart
+                    await User.update(
+                        { cartItems: {} },
+                        { where: { id: userId } }
+                    );
+                }
+                break;
+            }
+
+            case "payment_intent.payment_failed": {
+                const paymentIntent = event.data.object;
+                const paymentIntentId = paymentIntent.id;
+
+                // Retrieve the session to get metadata
+                const sessions = await stripeInstance.checkout.sessions.list({
+                    payment_intent: paymentIntentId,
+                });
+
+                if (sessions.data.length > 0) {
+                    const { orderId } = sessions.data[0].metadata;
+                    
+                    // Delete the failed order
+                    await Order.destroy({
+                        where: { id: orderId }
+                    });
+                }
+                break;
+            }
+
+            default:
+                console.log(`Unhandled event type: ${event.type}`);
+                break;
+        }
+
+        response.json({ received: true });
+
+    } catch (error) {
+        console.error("Webhook processing error:", error.message);
+        response.status(500).json({ error: "Webhook processing failed" });
     }
-
-    default:
-      console.error(`Unhandled event type ${event.type}`);
-      break;
-  }
-
-  response.json({ received: true });
 };
 
-// Update Order Status: PUT /api/order/status/:orderId
+/**
+ * Update Order Status
+ * Route: PUT /api/order/status/:orderId
+ * Access: Admin/Seller
+ */
 export const updateOrderStatus = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const { status } = req.body;
+    try {
+        const { orderId } = req.params;
+        const { status } = req.body;
 
-    // Validate status values
-    const validStatuses = ['Order Placed', 'Shipped', 'Delivered', 'Cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.json({ 
-        success: false, 
-        message: "Invalid status. Valid statuses are: " + validStatuses.join(', ') 
-      });
+        // Validate status values
+        const validStatuses = ['Order Placed', 'Shipped', 'Delivered', 'Cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.json({ 
+                success: false, 
+                message: "Invalid status. Valid statuses are: " + validStatuses.join(', ') 
+            });
+        }
+
+        // Prepare update data
+        const updateData = { status };
+        
+        // Add timestamp based on status
+        if (status === 'Shipped') {
+            updateData.shippedAt = new Date();
+        } else if (status === 'Delivered') {
+            updateData.deliveredAt = new Date();
+        }
+
+        // Find and update the order
+        const [updatedRowsCount] = await Order.update(updateData, {
+            where: { id: orderId }
+        });
+
+        if (updatedRowsCount === 0) {
+            return res.json({ 
+                success: false, 
+                message: "Order not found" 
+            });
+        }
+
+        // Fetch updated order with user details
+        const order = await Order.findByPk(orderId, {
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['name', 'email']
+                }
+            ]
+        });
+
+        // Here you could add email notification logic
+        // await sendOrderStatusEmail(order.user.email, order, status);
+
+        return res.json({ 
+            success: true, 
+            message: `Order status updated to ${status}`,
+            order 
+        });
+
+    } catch (error) {
+        console.error("Order status update error:", error.message);
+        return res.json({ 
+            success: false, 
+            message: "Failed to update order status. Please try again." 
+        });
     }
-
-    // Find and update the order
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      { 
-        status,
-        ...(status === 'Shipped' && { shippedAt: new Date() }),
-        ...(status === 'Delivered' && { deliveredAt: new Date() })
-      },
-      { new: true }
-    ).populate('userId', 'name email');
-
-    if (!order) {
-      return res.json({ success: false, message: "Order not found" });
-    }
-
-    // Here maybe add email notification logic
-    // sendOrderStatusEmail(order.userId.email, order, status);
-
-    return res.json({ 
-      success: true, 
-      message: `Order status updated to ${status}`,
-      order 
-    });
-  } catch (error) {
-    return res.json({ success: false, message: error.message });
-  }
 };
 
-// Get Orders by User ID : GET /api/order/user
+/**
+ * Get Orders by User ID
+ * Route: GET /api/order/user
+ * Access: Private (requires authentication)
+ */
 export const getUserOrders = async (req, res) => {
-  try {
-    const userId = req.userId;
+    try {
+        const userId = req.userId;
 
-    if (!userId) {
-      return res.json({ success: false, message: "Not authorized" });
-    }
-
-    const orders = await Order.find({
-      userId,
-      $or: [{ paymentType: "COD" }, { isPaid: true }],
-    })
-      .populate({
-        path: "items.product",
-        match: { _id: { $exists: true } }, // Only populate if product exists
-        select: "name category image offerPrice" // Only select needed fields
-      })
-      .populate("address")
-      .sort({ createdAt: -1 });
-
-    // Filter out orders where all products are null and clean up items
-    const filteredOrders = orders
-      .map(order => {
-        // Filter out items with null products
-        const validItems = order.items.filter(item => item.product !== null);
-        
-        if (validItems.length === 0) {
-          return null; // Mark order for removal if no valid items
+        if (!userId) {
+            return res.json({ 
+                success: false, 
+                message: "Not authorized" 
+            });
         }
-        
-        return {
-          ...order.toObject(),
-          items: validItems
-        };
-      })
-      .filter(order => order !== null); // Remove orders with no valid items
 
-    return res.json({ success: true, orders: filteredOrders });
-  } catch (error) {
-    console.error("Error fetching user orders:", error);
-    return res.json({ success: false, message: error.message });
-  }
+        // Fetch user orders with address details
+        const orders = await Order.findAll({
+            where: {
+                userId,
+                [Op.or]: [ // Fixed: Use Op.or instead of sequelize.Op.or
+                    { paymentType: "COD" },
+                    { isPaid: true }
+                ]
+            },
+            include: [
+                {
+                    model: Address,
+                    as: 'address'
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        // Process orders to include product details
+        const processedOrders = await Promise.all(
+            orders.map(async (order) => {
+                const orderData = order.toJSON();
+                
+                // Fetch product details for each item
+                const itemsWithProducts = await Promise.all(
+                    orderData.items.map(async (item) => {
+                        try {
+                            const product = await Product.findByPk(item.product, {
+                                attributes: ['id', 'name', 'category', 'image', 'offerPrice']
+                            });
+                            
+                            return {
+                                ...item,
+                                product: product ? product.toJSON() : null
+                            };
+                        } catch (error) {
+                            console.error(`Error fetching product ${item.product}:`, error);
+                            return {
+                                ...item,
+                                product: null
+                            };
+                        }
+                    })
+                );
+
+                // Filter out items with null products
+                const validItems = itemsWithProducts.filter(item => item.product !== null);
+                
+                // Only return order if it has valid items
+                if (validItems.length === 0) {
+                    return null;
+                }
+
+                return {
+                    ...orderData,
+                    items: validItems
+                };
+            })
+        );
+
+        // Filter out null orders
+        const filteredOrders = processedOrders.filter(order => order !== null);
+
+        return res.json({ 
+            success: true, 
+            orders: filteredOrders 
+        });
+
+    } catch (error) {
+        console.error("Error fetching user orders:", error.message);
+        return res.json({ 
+            success: false, 
+            message: "Failed to fetch orders. Please try again." 
+        });
+    }
 };
 
-// Get All Orders (for seller/admin) : GET /api/order/seller
+/**
+ * Get All Orders (for seller/admin)
+ * Route: GET /api/order/seller
+ * Access: Admin/Seller
+ */
 export const getAllOrders = async (req, res) => {
-  try {
-    const orders = await Order.find({
-      $or: [{ paymentType: "COD" }, { isPaid: true }],
-    })
-      .populate({
-        path: "items.product",
-        match: { _id: { $exists: true } }, // Only populate if product exists
-        select: "name category image offerPrice" // Only select needed fields
-      })
-      .populate("address")
-      .sort({ createdAt: -1 });
+    try {
+        // Fetch all orders with address details
+        const orders = await Order.findAll({
+            where: {
+                [Op.or]: [ // Fixed: Use Op.or instead of sequelize.Op.or
+                    { paymentType: "COD" },
+                    { isPaid: true }
+                ]
+            },
+            include: [
+                {
+                    model: Address,
+                    as: 'address'
+                },
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'name', 'email']
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
 
-    // Filter out orders where all products are null and clean up items
-    const filteredOrders = orders
-      .map(order => {
-        // Filter out items with null products
-        const validItems = order.items.filter(item => item.product !== null);
-        
-        if (validItems.length === 0) {
-          return null; // Mark order for removal if no valid items
-        }
-        
-        return {
-          ...order.toObject(),
-          items: validItems
-        };
-      })
-      .filter(order => order !== null); // Remove orders with no valid items
+        // Process orders to include product details
+        const processedOrders = await Promise.all(
+            orders.map(async (order) => {
+                const orderData = order.toJSON();
+                
+                // Fetch product details for each item
+                const itemsWithProducts = await Promise.all(
+                    orderData.items.map(async (item) => {
+                        try {
+                            const product = await Product.findByPk(item.product, {
+                                attributes: ['id', 'name', 'category', 'image', 'offerPrice']
+                            });
+                            
+                            return {
+                                ...item,
+                                product: product ? product.toJSON() : null
+                            };
+                        } catch (error) {
+                            console.error(`Error fetching product ${item.product}:`, error);
+                            return {
+                                ...item,
+                                product: null
+                            };
+                        }
+                    })
+                );
 
-    return res.json({ success: true, orders: filteredOrders });
-  } catch (error) {
-    console.error("Error fetching all orders:", error);
-    return res.json({ success: false, message: error.message });
-  }
+                // Filter out items with null products
+                const validItems = itemsWithProducts.filter(item => item.product !== null);
+                
+                // Only return order if it has valid items
+                if (validItems.length === 0) {
+                    return null;
+                }
+
+                return {
+                    ...orderData,
+                    items: validItems
+                };
+            })
+        );
+
+        // Filter out null orders
+        const filteredOrders = processedOrders.filter(order => order !== null);
+
+        return res.json({ 
+            success: true, 
+            orders: filteredOrders 
+        });
+
+    } catch (error) {
+        console.error("Error fetching all orders:", error.message);
+        return res.json({ 
+            success: false, 
+            message: "Failed to fetch orders. Please try again." 
+        });
+    }
 };
