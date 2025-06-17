@@ -1,6 +1,5 @@
 import stripe from "stripe";
 import { Op } from 'sequelize';
-import { Op } from "sequelize"; 
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js"

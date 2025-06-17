@@ -75,12 +75,10 @@ const Order = sequelize.define('Order', {
         type: DataTypes.DATE,
         allowNull: true
     }
-}, {
-<<<<<<< Updated upstream
+}, 
+
+{
     tableName: 'orders',
-=======
-    tableName: 'orders', 
->>>>>>> Stashed changes
     timestamps: true,
     indexes: [
         {
