@@ -1,10 +1,7 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../configs/db.js';
 import User from './User.js';
-<<<<<<< Updated upstream
 import Address from './Address.js';
-=======
->>>>>>> Stashed changes
 
 const Order = sequelize.define('Order', {
     id: {
@@ -18,7 +15,7 @@ const Order = sequelize.define('Order', {
         references: {
             model: User,
             key: 'id'
-        },
+        },  
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
     },

@@ -16,14 +16,10 @@ const authUser = async (req, res, next) => {
     req.userId = tokenDecode.id;
     next();
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: error.message });   
   }
 };
 
-<<<<<<< Updated upstream
 export default authUser;
 
 
-=======
-export default authUser;   
->>>>>>> Stashed changes

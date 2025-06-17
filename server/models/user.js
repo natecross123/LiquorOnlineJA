@@ -41,14 +41,9 @@ const User = sequelize.define('User', {
     {
       unique: true,
       fields: ['email'],
-    },
+    },  
   ],
 });
 
-<<<<<<< Updated upstream
 export default User;
 
-=======
-export default User;  
-  
->>>>>>> Stashed changes

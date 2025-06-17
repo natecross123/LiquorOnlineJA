@@ -102,7 +102,7 @@ const Product = sequelize.define('Product', {
         {
             fields: ['inStock']
         },
-        {
+        {  
             fields: ['name']
         },
         {
