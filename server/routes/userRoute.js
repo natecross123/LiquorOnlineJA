@@ -9,8 +9,5 @@ userRouter.post('/login', login);
 userRouter.get('/is-auth', authUser, isAuth);
 userRouter.get('/logout', authUser, logout);
 
-<<<<<<< Updated upstream
 export default userRouter;
-=======
-export default userRouter; 
->>>>>>> Stashed changes
+
