@@ -26,4 +26,5 @@ orderRouter.get('/seller', getAllOrders);
 // Update order status
 orderRouter.put('/status/:orderId', updateOrderStatus);
 
-export default orderRouter;
+export default orderRouter;   
+

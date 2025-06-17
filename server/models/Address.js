@@ -89,3 +89,4 @@ Address.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(Address, { foreignKey: 'userId', as: 'addresses' });
 
 export default Address;
+ 

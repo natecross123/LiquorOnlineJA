@@ -1,5 +1,7 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../configs/db.js';
+import User from './User.js';
+import Address from './Address.js';
 
 const Order = sequelize.define('Order', {
     id: {
@@ -11,9 +13,11 @@ const Order = sequelize.define('Order', {
         type: DataTypes.UUID, 
         allowNull: false,
         references: {
-            model: 'users', 
+            model: User,
             key: 'id'
-        }
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
     },
     items: {
         type: DataTypes.JSON,
@@ -40,12 +44,14 @@ const Order = sequelize.define('Order', {
         }
     },
     addressId: {
-        type: DataTypes.UUID, // Changed from INTEGER to UUID
+        type: DataTypes.UUID,
         allowNull: false,
         references: {
-            model: 'addresses', // Changed from 'Addresses' to 'addresses' (lowercase)
+            model: Address,
             key: 'id'
-        }
+        },
+        onDelete: 'RESTRICT',
+        onUpdate: 'CASCADE'
     },
     status: {
         type: DataTypes.ENUM('Order Placed', 'Shipped', 'Delivered', 'Cancelled'),
@@ -70,7 +76,7 @@ const Order = sequelize.define('Order', {
         allowNull: true
     }
 }, {
-    tableName: 'orders', // Changed from 'Orders' to 'orders' for consistency
+    tableName: 'orders',
     timestamps: true,
     indexes: [
         {
@@ -91,19 +97,26 @@ const Order = sequelize.define('Order', {
     ]
 });
 
-// Define associations
-Order.associate = (models) => {
-    // Order belongs to User
-    Order.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'user'
-    });
-    
-    // Order belongs to Address
-    Order.belongsTo(models.Address, {
-        foreignKey: 'addressId',
-        as: 'address'
-    });
-};
+// Define associations directly
+Order.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user'
+});
+
+Order.belongsTo(Address, {
+    foreignKey: 'addressId',
+    as: 'address'
+});
+
+// Define reverse associations
+User.hasMany(Order, {
+    foreignKey: 'userId',
+    as: 'orders'
+});
+
+Address.hasMany(Order, {
+    foreignKey: 'addressId',
+    as: 'orders'
+});
 
 export default Order;

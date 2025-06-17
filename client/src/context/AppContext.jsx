@@ -34,20 +34,21 @@ export const AppContextProvider = ({children})=>{
             setIsSeller(false)
         }
     }
+    
     // Fetch User Auth status, user data 
     const fetchUser = async ()=>{
         try {
             const{data}= await axios.get('/api/user/is-auth')
             if(data.success){
                 setUser(data.user)
-                setCartItems(data.user.cartItems)
+                // Safe cart loading with fallback
+                setCartItems(data.user.cartItems || {})
             }
         } catch (error) {
             setUser(null)
+            setCartItems({})
         }
     }
-
-
 
     // Fetch Products
     const fetchProducts = async ()=>{
@@ -77,29 +78,28 @@ export const AppContextProvider = ({children})=>{
         setCartItems(cartData);
         toast.success("Added To Cart");
     };
-    
 
+    // Update cart Items
+    const updateCartItem =(itemId, quantity)=>{
+        let cartData = structuredClone(cartItems);
+        cartData[itemId]= quantity;
+        setCartItems(cartData)
+        toast.success("Cart Updated")
+    };
 
-// Update cart Items
-const updateCartItem =(itemId, quantity)=>{
-    let cartData = structuredClone(cartItems);
-    cartData[itemId]= quantity;
-    setCartItems(cartData)
-    toast.success("Cart Updated")
-};
-// Remove from cart
-const removeFromCart = (itemId) => {
-    let cartData = structuredClone(cartItems);
+    // Remove from cart
+    const removeFromCart = (itemId) => {
+        let cartData = structuredClone(cartItems);
 
-    if (cartData[itemId]) {
-        cartData[itemId] -= 1;
-        if (cartData[itemId] === 0) {
-            delete cartData[itemId];
+        if (cartData[itemId]) {
+            cartData[itemId] -= 1;
+            if (cartData[itemId] === 0) {
+                delete cartData[itemId];
+            }
         }
+        toast.success("Removed From Cart")
+        setCartItems(cartData)
     }
-    toast.success("Removed From Cart")
-    setCartItems(cartData)
-}
 
     // Get Cart Item Count 
     const getCartCount = ()=>{
@@ -108,26 +108,43 @@ const removeFromCart = (itemId) => {
             totalCount += cartItems[item];
           }
           return totalCount;
-        }
-    
-        // Get Cart Total Amount
-        const getCartAmount =()=> {
-            let totalAmount = 0;
-            for (const items in cartItems){
-                let itemInfo = products.find((product)=> product._id === items);
-                if(cartItems [items] > 0){
-                    totalAmount += itemInfo.offerPrice * cartItems[items]
-                }
-            }
-            return Math.floor(totalAmount*100)/100;
-        }
+    }
 
+    // Get Cart Total Amount - FIXED VERSION
+    const getCartAmount = () => {
+        let totalAmount = 0;
+        
+        // Safety check for cartItems and products
+        if (!cartItems || !products || products.length === 0) {
+            return 0;
+        }
+        
+        for (const items in cartItems) {
+            // Find product with both _id and id compatibility
+            let itemInfo = products.find((product) => {
+                const productId = product._id || product.id;
+                return productId == items || String(productId) === String(items);
+            });
+            
+            // Safety check for itemInfo and quantity
+            if (itemInfo && cartItems[items] > 0) {
+                // Use offerPrice if available, otherwise use price, fallback to 0
+                const price = itemInfo.offerPrice || itemInfo.price || 0;
+                totalAmount += price * cartItems[items];
+            } else if (!itemInfo) {
+                console.warn(`Product with ID ${items} not found for cart calculation`);
+            }
+        }
+        
+        return Math.floor(totalAmount * 100) / 100;
+    }
 
     useEffect(()=>{
         fetchUser()
         fetchSeller()
         fetchProducts()
     },[])
+    
     // Update Database Cart Items 
     useEffect(()=>{
         const updateCart = async()=>{
@@ -140,14 +157,34 @@ const removeFromCart = (itemId) => {
                 toast.error(error.message) 
             }
         }
-        if(user){
+        if(user && Object.keys(cartItems).length >= 0){
             updateCart()
         }
     },[cartItems, user])
 
-    const value = {navigate, user, setUser, setIsSeller,isSeller,ShowUserLogin,setShowUserLogin,products,currency,addToCart,updateCartItem,removeFromCart
-        , cartItems,searchQuery,setSearchQuery,getCartCount,getCartAmount,axios, fetchProducts,setCartItems
-}
+    const value = {
+        navigate, 
+        user, 
+        setUser, 
+        setIsSeller,
+        isSeller,
+        ShowUserLogin,
+        setShowUserLogin,
+        products,
+        currency,
+        addToCart,
+        updateCartItem,
+        removeFromCart,
+        cartItems,
+        searchQuery,
+        setSearchQuery,
+        getCartCount,
+        getCartAmount,
+        axios, 
+        fetchProducts,
+        setCartItems
+    }
+    
     return <AppContext.Provider value={value}>
             {children}
         </AppContext.Provider>

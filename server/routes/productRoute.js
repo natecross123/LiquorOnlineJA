@@ -18,7 +18,7 @@ productRouter.post("/add", upload.array("images", 5), authSeller, addProduct);
 // Get all products (with optional filtering and pagination)
 productRouter.get("/list", ProductList);
 
-// Get single product by ID
+// Get single product by ID - Fixed route to match frontend navigation
 productRouter.get("/:id", ProductById);
 
 // Get products by category
