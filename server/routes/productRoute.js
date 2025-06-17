@@ -30,4 +30,4 @@ productRouter.put("/stock", authSeller, changeStock);
 // Remove product
 productRouter.delete("/remove/:id", authSeller, removeProduct);
 
-export default productRouter;
+export default productRouter; 

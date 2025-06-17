@@ -8,26 +8,22 @@ export const updateCart = async (req, res) => {
     const { cartItems } = req.body;
     const userId = req.userId;
 
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "Auth required" });
-    }
-
-    // Simple validation
-    const sanitized = {};
-    if (cartItems && typeof cartItems === 'object') {
-      for (const [productId, quantity] of Object.entries(cartItems)) {
-        const id = parseInt(productId);
-        const qty = parseInt(quantity);
-        if (!isNaN(id) && !isNaN(qty) && qty > 0 && qty <= 50) {
-          sanitized[id] = qty;
+        // Validate required fields
+        if (!userId) {
+            return res.json({ 
+                success: false, 
+                message: "User ID is required" 
+            });
         }
-      }
-    }
 
-    const [updatedRowsCount] = await User.update(
-      { cartItems: sanitized },
-      { where: { id: userId }, fields: ['cartItems'] }
-    );
+        // Update user's cart items
+        const [updatedRowsCount] = await User.update(
+            { cartItems },
+            { 
+                where: { id: userId },
+                returning: true // This will return the updated record (PostgreSQL)
+            }
+        );
 
     if (updatedRowsCount === 0) {
       return res.status(404).json({ success: false, message: "User not found" });

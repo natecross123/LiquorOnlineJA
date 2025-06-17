@@ -20,6 +20,10 @@ const authUser = async (req, res, next) => {
   }
 };
 
+<<<<<<< Updated upstream
 export default authUser;
 
 
+=======
+export default authUser;   
+>>>>>>> Stashed changes

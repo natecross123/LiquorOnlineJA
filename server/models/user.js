@@ -45,5 +45,10 @@ const User = sequelize.define('User', {
   ],
 });
 
+<<<<<<< Updated upstream
 export default User;
 
+=======
+export default User;  
+  
+>>>>>>> Stashed changes

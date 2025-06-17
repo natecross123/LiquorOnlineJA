@@ -26,5 +26,9 @@ orderRouter.get('/seller', getAllOrders);
 // Update order status
 orderRouter.put('/status/:orderId', updateOrderStatus);
 
+<<<<<<< Updated upstream
 export default orderRouter;   
 
+=======
+export default orderRouter; 
+>>>>>>> Stashed changes
