@@ -1,9 +1,6 @@
 import stripe from "stripe";
-<<<<<<< Updated upstream
 import { Op } from 'sequelize';
-=======
 import { Op } from "sequelize"; 
->>>>>>> Stashed changes
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js"
@@ -341,7 +338,6 @@ export const getAllOrders = async (req, res) => {
     if (cached && Date.now() < cached.expires) {
       return res.json(cached.data);
     }
-<<<<<<< Updated upstream
 
     const whereClause = {
       [Op.or]: [{ paymentType: "COD" }, { isPaid: true }]
@@ -405,6 +401,3 @@ export const getAllOrders = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to fetch orders" });
   }
 };
-=======
-};
->>>>>>> Stashed changes
