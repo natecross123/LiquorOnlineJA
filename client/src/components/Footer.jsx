@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { assets, footerLinks } from "../assets/assets";
 
 const Footer = () => {
@@ -17,9 +18,25 @@ const Footer = () => {
                             <ul className="text-sm space-y-1 text-gray-300">
                                 {section.links.map((link, i) => (
                                     <li key={i}>
-                                        <a href={link.url} className="hover:underline hover:text-white transition">
-                                            {link.text}
-                                        </a>
+                                        {link.url.startsWith('http') ? (
+                                            // External links (social media)
+                                            <a 
+                                                href={link.url} 
+                                                className="hover:underline hover:text-white transition"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                {link.text}
+                                            </a>
+                                        ) : (
+                                            // Internal React Router links
+                                            <Link 
+                                                to={link.url} 
+                                                className="hover:underline hover:text-white transition"
+                                            >
+                                                {link.text}
+                                            </Link>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

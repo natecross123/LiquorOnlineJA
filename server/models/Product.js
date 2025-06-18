@@ -105,7 +105,7 @@ const Product = sequelize.define('Product', {
         {  
             fields: ['name']
         },
-        {
+        {  
             fields: ['price']
         },
         {

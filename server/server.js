@@ -29,7 +29,7 @@ app.use(cookieParser());
 app.use(cors({
   origin: allowedOrigins, 
   credentials: true
-}));
+}));  
 
 // Routes
 app.get('/', (req, res) => res.send("API is Working"));

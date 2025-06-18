@@ -71,6 +71,9 @@ import soda_assets from "./soda_asset.png";
 import beer_assets from "./beer_asset.png";
 import vodka_assets from "./vodka_asset.png";
 import LogoJA from "./LogoJA.svg";
+import { Link } from 'react-router-dom';
+
+
 
 
 export const assets = {
@@ -160,21 +163,22 @@ export const footerLinks = [
   {
     title: "Quick Links",
     links: [
-      { text: "Home", url: "#" },
-      { text: "Best Sellers", url: "#" },
-      { text: "Offers & Deals", url: "#" },
-      { text: "Contact Us", url: "#" },
-      { text: "FAQs", url: "#" },
+      { text: "Home", url: "/" },
+      { text: "All Products", url: '/products' },
+      { text: "Cart", url: "/Cart" },
+      { text: "My Orders", url: '/my-orders'},
+      { text: "User Policy", url: "/UserPolicy" },
+
     ],
   },
   {
     title: "Need help?",
     links: [
-      { text: "Delivery Information", url: "#" },
-      { text: "Return & Refund Policy", url: "#" },
-      { text: "Payment Methods", url: "#" },
-      { text: "Track your Order", url: "#" },
-      { text: "Contact Us", url: "#" },
+      { text: "Best Sellers", url: "/" },
+      { text: "Return & Refund Policy", url: "/Faq" },
+      { text: "Payment Methods", url: "/PaymentMethods" },
+      { text: "Track your Order", url: '/my-orders' },
+      { text: "FAQ", url: "/Faq" },
     ],
   },
   {
@@ -207,7 +211,7 @@ export const features = [
   {
     icon: trust_icon,
     title: "Trusted by Thousands",
-    description: "Loved by 10,000+ happy customers.",
+    description: "Loved by 5,000+ happy customers.",
   },
 ];
 
