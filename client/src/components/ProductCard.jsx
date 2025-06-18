@@ -5,11 +5,16 @@ import { useAppContext } from "../context/AppContext";
 const ProductCard = ({ product }) => {
   const { currency, addToCart, removeFromCart, cartItems, navigate } = useAppContext();
 
-  return product && (
+  if (!product) return null;
+
+  // Get consistent product ID
+  const productId = product._id || product.id;
+
+  return (
     <div
       onClick={() => {
-        navigate(`/products/${product.category.toLowerCase()}/${product._id}`);
-        scrollTo(0, 0);
+        navigate(`/products/${product.category.toLowerCase()}/${productId}`);
+        window.scrollTo(0, 0);
       }}
       className="border border-gray-500/20 rounded-md px-3 py-2 bg-white w-56 cursor-pointer"
     >
@@ -17,16 +22,16 @@ const ProductCard = ({ product }) => {
       <div className="group flex items-center justify-center px-2 h-40">
         <img
           className="group-hover:scale-105 transition h-36 object-contain"
-          src={product.image[0]}
-          alt={product.name}
+          src={product.image?.[0] || ''}
+          alt={product.name || 'Product'}
         />
-      </div>
+      </div>  
 
       {/* Details */}
       <div className="text-gray-500/60 text-sm mt-2">
-        <p>{product.category}</p>
+        <p>{product.category || 'Category'}</p>
         <p className="text-gray-700 font-medium text-lg truncate w-full overflow-hidden whitespace-nowrap">
-          {product.name}
+          {product.name || 'Product Name'}
         </p>
 
         {/* Rating */}
@@ -68,10 +73,10 @@ const ProductCard = ({ product }) => {
             onClick={(e) => e.stopPropagation()}
             className="text-primary"
           >
-            {!cartItems[product._id] ? (
+            {!cartItems[productId] ? (
               <button
                 className="flex items-center justify-center gap-1 bg-primary/10 border border-primary/40 md:w-[80px] w-[64px] h-[34px] rounded"
-                onClick={() => addToCart(product._id)}
+                onClick={() => addToCart(productId)}
               >
                 <img src={assets.cart_icon} alt="cart_icon" />
                 Add
@@ -79,14 +84,14 @@ const ProductCard = ({ product }) => {
             ) : (
               <div className="flex items-center justify-center gap-2 md:w-20 w-16 h-[34px] bg-primary/25 rounded select-none">
                 <button
-                  onClick={() => removeFromCart(product._id)}
+                  onClick={() => removeFromCart(productId)}
                   className="cursor-pointer text-md px-2 h-full"
                 >
                   -
                 </button>
-                <span className="w-5 text-center">{cartItems[product._id]}</span>
+                <span className="w-5 text-center">{cartItems[productId]}</span>
                 <button
-                  onClick={() => addToCart(product._id)}
+                  onClick={() => addToCart(productId)}
                   className="cursor-pointer text-md px-2 h-full"
                 >
                   +

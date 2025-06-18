@@ -2,7 +2,7 @@ import stripe from "stripe";
 import { Op } from 'sequelize';
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
-import User from "../models/User.js"
+import User from "../models/User.js";
 import Address from "../models/Address.js";
 
 const cache = new Map();

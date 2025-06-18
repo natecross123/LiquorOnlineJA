@@ -11,3 +11,4 @@ userRouter.get('/logout', authUser, logout);
 
 export default userRouter;
 
+ 

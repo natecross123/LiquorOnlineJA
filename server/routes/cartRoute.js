@@ -10,4 +10,4 @@ cartRouter.get('/get', authUser, getCart);
 // Update user's cart data
 cartRouter.post('/update', authUser, updateCart);
 
-export default cartRouter; 
+export default cartRouter;

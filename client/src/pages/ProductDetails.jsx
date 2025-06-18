@@ -19,38 +19,30 @@ const ProductDetails = () => {
         }
         return `${currency}${price}`;
     };
-    
-    // Debug logging
-    console.log('ProductDetails Debug:', {
-        id,
-        category,
-        productsLength: products.length,
-        allProductIds: products.map(p => ({ id: p.id || p._id, name: p.name }))
-    });
 
-    // Try to find product in context first, then fetch from API if needed
+    // Find product - simplified approach
     useEffect(() => {
         const findProduct = async () => {
+            if (!id) {
+                setLoading(false);
+                return;
+            }
+
             setLoading(true);
             
             // First try to find in context products
             let foundProduct = products.find((item) => {
                 const itemId = String(item._id || item.id);
                 const searchId = String(id);
-                console.log('Comparing:', { itemId, searchId, match: itemId === searchId });
                 return itemId === searchId;
             });
             
-            console.log('Found in context:', foundProduct);
-            
-            // If not found in context and we have products loaded, try fetching from API
-            if (!foundProduct && products.length > 0) {
-                console.log('Product not found in context, fetching from API...');
+            // If not found and we have products loaded, try API
+            if (!foundProduct) {
                 try {
                     const response = await axios.get(`/api/product/${id}`);
                     if (response.data.success) {
                         foundProduct = response.data.product;
-                        console.log('Found via API:', foundProduct);
                     }
                 } catch (error) {
                     console.error('Error fetching product:', error);
@@ -61,17 +53,13 @@ const ProductDetails = () => {
             setLoading(false);
         };
 
-        // Only start searching when we have an ID
-        if (id) {
-            findProduct();
-        }
+        findProduct();
     }, [id, products, axios]);
 
-    // Set up related products when product is found
+    // Set up related products
     useEffect(() => {
         if (product && products.length > 0) {
-            let productsCopy = products.slice();
-            productsCopy = productsCopy.filter((item) => 
+            const productsCopy = products.filter((item) => 
                 product.category === item.category && 
                 String(item._id || item.id) !== String(id)
             );
@@ -79,32 +67,27 @@ const ProductDetails = () => {
         }
     }, [product, products, id]);
 
-    // Set thumbnail when product is loaded
+    // Set thumbnail
     useEffect(() => {
         if (product?.image?.length > 0) {
             setThumbnail(product.image[0]);
-        } else {
-            setThumbnail(null);
         }
     }, [product]);
 
-    // Show loading state while products are being fetched
-    if (loading && products.length === 0) {
-        return product && (
+    // Loading state
+    if (loading) {
+        return (
             <div className="mt-12 text-center">
                 <h2 className="text-2xl font-medium text-gray-600">Loading...</h2>
             </div>
         );
     }
 
-    // If product not found after products are loaded
-    if (!loading && !product) {
+    // Product not found
+    if (!product) {
         return (
             <div className="mt-12 text-center">
                 <h2 className="text-2xl font-medium text-gray-600">Product not found</h2>
-                <p className="text-gray-500 mt-2">
-                    Looking for product ID: {id} in {products.length} products
-                </p>
                 <button 
                     onClick={() => navigate('/products')}
                     className="mt-4 px-6 py-2 bg-primary text-white rounded hover:bg-primary-dull transition"
@@ -115,6 +98,7 @@ const ProductDetails = () => {
         );
     }
 
+    const productId = product._id || product.id;
     const displayPrice = formatPrice(product.price);
     const displayOfferPrice = formatPrice(product.offerPrice);
 
@@ -124,13 +108,13 @@ const ProductDetails = () => {
                 <Link to={"/"}>Home</Link> /
                 <Link to={"/products"}> Products</Link> /
                 <Link to={`/products/${category}`}> {category}</Link> /
-                <span className="text-indigo-500"> {product.name}</span>
+                <span className="text-indigo-500"> {product.name || 'Product'}</span>
             </p>
 
             <div className="flex flex-col md:flex-row gap-16 mt-4">
                 <div className="flex gap-3">
                     <div className="flex flex-col gap-3">
-                        {product.image?.map((image, index) => (
+                        {(product.image || []).map((image, index) => (
                             <div 
                                 key={index} 
                                 onClick={() => setThumbnail(image)} 
@@ -142,12 +126,12 @@ const ProductDetails = () => {
                     </div>
 
                     <div className="border border-gray-500/30 max-w-100 rounded overflow-hidden">
-                        <img src={thumbnail} alt="selected product" />
+                        {thumbnail && <img src={thumbnail} alt="selected product" />}
                     </div>
                 </div>
 
                 <div className="text-sm w-full md:w-1/2">
-                    <h1 className="text-3xl font-medium">{product.name}</h1>
+                    <h1 className="text-3xl font-medium">{product.name || 'Product Name'}</h1>
 
                     <div className="flex items-center gap-0.5 mt-1">
                         {Array(5).fill('').map((_, i) => (
@@ -161,29 +145,24 @@ const ProductDetails = () => {
                         <p className="text-base ml-2">(4)</p>
                     </div>
 
-                    {/* Fixed Price Display */}
                     <div className="mt-6">
                         {displayOfferPrice && displayPrice ? (
-                            // Both prices available
                             <>
                                 <p className="text-gray-500/70 line-through">MRP: {displayPrice}</p>
                                 <p className="text-2xl font-medium">MRP: {displayOfferPrice}</p>
                                 <span className="text-gray-500/70">(inclusive of all taxes)</span>
                             </>
                         ) : displayOfferPrice ? (
-                            // Only offer price available
                             <>
                                 <p className="text-2xl font-medium">MRP: {displayOfferPrice}</p>
                                 <span className="text-gray-500/70">(inclusive of all taxes)</span>
                             </>
                         ) : displayPrice ? (
-                            // Only regular price available
                             <>
                                 <p className="text-2xl font-medium">MRP: {displayPrice}</p>
                                 <span className="text-gray-500/70">(inclusive of all taxes)</span>
                             </>
                         ) : (
-                            // No price available
                             <p className="text-xl text-gray-400">Price not available</p>
                         )}
                     </div>
@@ -203,14 +182,14 @@ const ProductDetails = () => {
 
                     <div className="flex items-center mt-10 gap-4 text-base">
                         <button 
-                            onClick={() => addToCart(product._id || product.id)} 
+                            onClick={() => addToCart(productId)} 
                             className="w-full py-3.5 cursor-pointer font-medium bg-gray-100 text-gray-800/80 hover:bg-gray-200 transition"
                         >
                             Add to Cart
                         </button>
                         <button 
                             onClick={() => {
-                                addToCart(product._id || product.id); 
+                                addToCart(productId); 
                                 navigate("/cart");
                             }} 
                             className="w-full py-3.5 cursor-pointer font-medium bg-primary text-white hover:bg-primary-dull transition"
