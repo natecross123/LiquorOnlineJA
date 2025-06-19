@@ -8,7 +8,7 @@ A full-featured e-commerce web application for a liquor store, allowing users to
 👤 User
 Register & log in securely
 
-Browse groceries by category
+Browse Liquors by category
 
 Search and filter items
 
