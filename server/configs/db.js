@@ -1,14 +1,18 @@
 import { Sequelize } from 'sequelize';
 
+// Better connection pool settings for Neon PostgreSQL
 const sequelize = new Sequelize(process.env.DATABASE_URL || process.env.POSTGRES_URI, {
   dialect: 'postgres',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  
+  
   pool: {
-    max: 10, 
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
+    max: 50,        // Increased from 10 - better for concurrent requests
+    min: 5,         // Keep some connections alive instead of 0
+    acquire: 30000, 
+    idle: 10000,    // idle time
   },
+  
   dialectOptions: {
     ssl: process.env.NODE_ENV === 'production' ? {
       require: true,
@@ -35,4 +39,4 @@ const connectDB = async () => {
 };
 
 export { sequelize, connectDB };
-export default connectDB;  
+export default connectDB;

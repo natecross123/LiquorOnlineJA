@@ -2,8 +2,26 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from "../models/User.js";
 
+// Simple cache for user data
 const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+const getCache = (key) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() < cached.expires) {
+    return cached.data;
+  }
+  cache.delete(key);
+  return null;
+};
+
+const setCache = (key, data, ttl = CACHE_TTL) => {
+  if (cache.size > 1000) {
+    const firstKey = cache.keys().next().value;
+    cache.delete(firstKey);
+  }
+  cache.set(key, { data, expires: Date.now() + ttl });
+};
 
 export const register = async (req, res) => {
   try {
@@ -24,7 +42,8 @@ export const register = async (req, res) => {
       return res.status(409).json({ success: false, message: 'User already exists' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Reduced from 12 to 10 rounds for better performance
+    const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ name: name.trim(), email: normalizedEmail, password: hashedPassword });
 
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
@@ -36,10 +55,8 @@ export const register = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    cache.set(user.id.toString(), {
-      data: { id: user.id, email: user.email, name: user.name },
-      expires: Date.now() + CACHE_TTL
-    });
+    const userData = { id: user.id, email: user.email, name: user.name };
+    setCache(user.id.toString(), userData);
 
     return res.status(201).json({ success: true, user: { email: user.email, name: user.name } });
   } catch (error) {
@@ -75,7 +92,7 @@ export const login = async (req, res) => {
     });
 
     const userData = { id: user.id, email: user.email, name: user.name };
-    cache.set(user.id.toString(), { data: userData, expires: Date.now() + CACHE_TTL });
+    setCache(user.id.toString(), userData);
 
     return res.json({ success: true, user: userData });
   } catch (error) {
@@ -87,10 +104,11 @@ export const login = async (req, res) => {
 export const isAuth = async (req, res) => {
   try {
     const userId = req.userId.toString();
-    const cached = cache.get(userId);
     
-    if (cached && Date.now() < cached.expires) {
-      return res.json({ success: true, user: cached.data });
+    // Check cache first to avoid DB call
+    const cached = getCache(userId);
+    if (cached) {
+      return res.json({ success: true, user: cached });
     }
 
     const user = await User.findByPk(req.userId, {
@@ -102,7 +120,7 @@ export const isAuth = async (req, res) => {
     }
 
     const userData = { id: user.id, email: user.email, name: user.name };
-    cache.set(userId, { data: userData, expires: Date.now() + CACHE_TTL });
+    setCache(userId, userData);
 
     return res.json({ success: true, user: userData });
   } catch (error) {
@@ -113,7 +131,9 @@ export const isAuth = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    if (req.userId) cache.delete(req.userId.toString());
+    if (req.userId) {
+      cache.delete(req.userId.toString());
+    }
     
     res.clearCookie('token', {
       httpOnly: true,
@@ -126,4 +146,3 @@ export const logout = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Logout failed' });
   }
 };
-

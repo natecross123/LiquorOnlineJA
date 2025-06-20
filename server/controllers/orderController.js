@@ -8,6 +8,33 @@ import Address from "../models/Address.js";
 const cache = new Map();
 const CACHE_TTL = 10 * 60 * 1000;
 
+const getCache = (key) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() < cached.expires) {
+    return cached.data;
+  }
+  cache.delete(key);
+  return null;
+};
+
+const setCache = (key, data, ttl = CACHE_TTL) => {
+  if (cache.size > 500) {
+    const firstKey = cache.keys().next().value;
+    cache.delete(firstKey);
+  }
+  cache.set(key, { data, expires: Date.now() + ttl });
+};
+
+const clearOrderCaches = (userId = null) => {
+  for (const [key] of cache) {
+    if (key.startsWith('user_orders:') || key.startsWith('all_orders:')) {
+      if (!userId || key.includes(userId)) {
+        cache.delete(key);
+      }
+    }
+  }
+};
+
 // Place Order COD : POST /api/order/cod
 export const placeOrderCOD = async (req, res) => {
   try {
@@ -28,7 +55,7 @@ export const placeOrderCOD = async (req, res) => {
       return res.status(404).json({ success: false, message: "Address not found" });
     }
 
-    // Batch fetch all products
+    // Batch fetch all products in ONE query (fixes N+1 problem)
     const productIds = [...new Set(items.map(item => item.product))];
     const products = await Product.findAll({
       where: { id: { [Op.in]: productIds } },
@@ -67,7 +94,7 @@ export const placeOrderCOD = async (req, res) => {
       paymentType: "COD",
     });
 
-    cache.clear(); // Clear cache on new order
+    clearOrderCaches(userId);
 
     return res.status(201).json({ success: true, message: "Order placed successfully", orderId: order.id });
   } catch (error) {
@@ -97,7 +124,7 @@ export const placeOrderStripe = async (req, res) => {
       return res.status(404).json({ success: false, message: "Address not found" });
     }
 
-    // Batch fetch products and calculate amount
+    // Batch fetch products and calculate amount (fixes N+1 problem)
     const productIds = [...new Set(items.map(item => item.product))];
     const products = await Product.findAll({
       where: { id: { [Op.in]: productIds } },
@@ -195,7 +222,7 @@ export const stripeWebhooks = async (request, response) => {
       // Clear user's cart
       await User.update({ cartItems: {} }, { where: { id: userId } });
       
-      cache.clear();
+      clearOrderCaches(userId);
       break;
     }
 
@@ -204,8 +231,9 @@ export const stripeWebhooks = async (request, response) => {
       const session = await stripeInstance.checkout.sessions.list({
         payment_intent: paymentIntent.id,
       });
-      const { orderId } = session.data[0].metadata;
+      const { orderId, userId } = session.data[0].metadata;
       await Order.destroy({ where: { id: orderId } });
+      clearOrderCaches(userId);
       break;
     }
 
@@ -241,7 +269,7 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    cache.clear();
+    clearOrderCaches();
     return res.json({ success: true, message: `Order status updated to ${status}` });
   } catch (error) {
     console.error("Update order status error:", error);
@@ -263,9 +291,9 @@ export const getUserOrders = async (req, res) => {
     const limitNum = Math.min(20, Math.max(1, parseInt(limit)));
     const cacheKey = `user_orders:${userId}:${pageNum}:${limitNum}`;
     
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() < cached.expires) {
-      return res.json(cached.data);
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
     const orders = await Order.findAll({
@@ -285,37 +313,40 @@ export const getUserOrders = async (req, res) => {
       offset: (pageNum - 1) * limitNum
     });
 
-    // Process orders to add product details
-    const processedOrders = await Promise.all(
-      orders.map(async (order) => {
-        const orderObj = order.toJSON();
-        
-        const productIds = orderObj.items.map(item => item.product);
-        const products = await Product.findAll({
-          where: { id: { [Op.in]: productIds } },
-          attributes: ['id', 'name', 'category', 'image', 'offerPrice', 'price']
-        });
+    // BIG FIX: Get ALL product IDs from ALL orders in ONE query
+    const allProductIds = [...new Set(
+      orders.flatMap(order => order.items.map(item => parseInt(item.product)))
+    )];
 
-        const productMap = new Map(products.map(p => [p.id, p.toJSON()]));
+    // ONE database query instead of N queries
+    const products = await Product.findAll({
+      where: { id: { [Op.in]: allProductIds } },
+      attributes: ['id', 'name', 'category', 'image', 'offerPrice', 'price']
+    });
 
-        const processedItems = orderObj.items.map(item => ({
-          ...item,
-          product: productMap.get(item.product) ? {
-            ...productMap.get(item.product),
-            _id: item.product
-          } : null
-        }));
+    const productMap = new Map(products.map(p => [p.id, p.toJSON()]));
 
-        return {
-          ...orderObj,
-          _id: orderObj.id,
-          items: processedItems
-        };
-      })
-    );
+    // Process orders efficiently
+    const processedOrders = orders.map(order => {
+      const orderObj = order.toJSON();
+      
+      const processedItems = orderObj.items.map(item => ({
+        ...item,
+        product: productMap.get(parseInt(item.product)) ? {
+          ...productMap.get(parseInt(item.product)),
+          _id: item.product
+        } : null
+      }));
+
+      return {
+        ...orderObj,
+        _id: orderObj.id,
+        items: processedItems
+      };
+    });
 
     const responseData = { success: true, orders: processedOrders };
-    cache.set(cacheKey, { data: responseData, expires: Date.now() + CACHE_TTL });
+    setCache(cacheKey, responseData);
 
     return res.json(responseData);
   } catch (error) {
@@ -332,10 +363,9 @@ export const getAllOrders = async (req, res) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
     
     const cacheKey = `all_orders:${pageNum}:${limitNum}:${status || 'all'}`;
-    const cached = cache.get(cacheKey);
-    
-    if (cached && Date.now() < cached.expires) {
-      return res.json(cached.data);
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
     const whereClause = {
@@ -362,37 +392,40 @@ export const getAllOrders = async (req, res) => {
       offset: (pageNum - 1) * limitNum
     });
 
-    // Process orders (same as getUserOrders)
-    const processedOrders = await Promise.all(
-      orders.map(async (order) => {
-        const orderObj = order.toJSON();
-        
-        const productIds = orderObj.items.map(item => item.product);
-        const products = await Product.findAll({
-          where: { id: { [Op.in]: productIds } },
-          attributes: ['id', 'name', 'category', 'image', 'offerPrice', 'price']
-        });
+    // BIG FIX: Get ALL product IDs from ALL orders in ONE query
+    const allProductIds = [...new Set(
+      orders.flatMap(order => order.items.map(item => parseInt(item.product)))
+    )];
 
-        const productMap = new Map(products.map(p => [p.id, p.toJSON()]));
+    // ONE database query instead of N queries
+    const products = await Product.findAll({
+      where: { id: { [Op.in]: allProductIds } },
+      attributes: ['id', 'name', 'category', 'image', 'offerPrice', 'price']
+    });
 
-        const processedItems = orderObj.items.map(item => ({
-          ...item,
-          product: productMap.get(item.product) ? {
-            ...productMap.get(item.product),
-            _id: item.product
-          } : null
-        }));
+    const productMap = new Map(products.map(p => [p.id, p.toJSON()]));
 
-        return {
-          ...orderObj,
-          _id: orderObj.id,
-          items: processedItems
-        };
-      })
-    );
+    // Process orders efficiently
+    const processedOrders = orders.map(order => {
+      const orderObj = order.toJSON();
+      
+      const processedItems = orderObj.items.map(item => ({
+        ...item,
+        product: productMap.get(parseInt(item.product)) ? {
+          ...productMap.get(parseInt(item.product)),
+          _id: item.product
+        } : null
+      }));
+
+      return {
+        ...orderObj,
+        _id: orderObj.id,
+        items: processedItems
+      };
+    });
 
     const responseData = { success: true, orders: processedOrders };
-    cache.set(cacheKey, { data: responseData, expires: Date.now() + CACHE_TTL });
+    setCache(cacheKey, responseData);
 
     return res.json(responseData);
   } catch (error) {
@@ -400,4 +433,3 @@ export const getAllOrders = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to fetch orders" });
   }
 };
-

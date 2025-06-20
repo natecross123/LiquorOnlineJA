@@ -2,8 +2,36 @@ import { v2 as cloudinary } from "cloudinary";
 import Product from "../models/Product.js";
 import { Op } from 'sequelize';
 
+// Simple cache - just a Map with TTL
 const cache = new Map();
-const CACHE_TTL = 15 * 60 * 1000;
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+// Simple cache helpers
+const getCache = (key) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() < cached.expires) {
+    return cached.data;
+  }
+  cache.delete(key); // Clean up expired
+  return null;
+};
+
+const setCache = (key, data, ttl = CACHE_TTL) => {
+  // Simple size limit - remove oldest if too big
+  if (cache.size > 1000) {
+    const firstKey = cache.keys().next().value;
+    cache.delete(firstKey);
+  }
+  cache.set(key, { data, expires: Date.now() + ttl });
+};
+
+const clearProductCaches = () => {
+  for (const [key] of cache) {
+    if (key.startsWith('products:') || key.startsWith('product:') || key.startsWith('category:')) {
+      cache.delete(key);
+    }
+  }
+};
 
 // Helper function to ensure consistent product format
 const formatProductResponse = (product) => {
@@ -39,15 +67,11 @@ export const addProduct = async (req, res) => {
       return res.json({ success: false, message: "Images required" });
     }
 
-    console.log('Price validation - price:', productData.price, 'type:', typeof productData.price);
-    console.log('Price validation - offerPrice:', productData.offerPrice, 'type:', typeof productData.offerPrice);
-
     let price = null;
     let offerPrice = null;
 
     if (productData.price !== undefined && productData.price !== null && productData.price !== '') {
       const numPrice = Number(productData.price);
-      console.log('Converted price:', numPrice, 'isNaN:', isNaN(numPrice));
       if (!isNaN(numPrice) && numPrice > 0) {
         price = numPrice;
       }
@@ -55,13 +79,10 @@ export const addProduct = async (req, res) => {
 
     if (productData.offerPrice !== undefined && productData.offerPrice !== null && productData.offerPrice !== '') {
       const numOfferPrice = Number(productData.offerPrice);
-      console.log('Converted offerPrice:', numOfferPrice, 'isNaN:', isNaN(numOfferPrice));
       if (!isNaN(numOfferPrice) && numOfferPrice > 0) {
         offerPrice = numOfferPrice;
       }
     }
-
-    console.log('Final prices - price:', price, 'offerPrice:', offerPrice);
 
     if (!price && !offerPrice) {
       return res.json({ success: false, message: "At least one valid price is required" });
@@ -90,11 +111,10 @@ export const addProduct = async (req, res) => {
       image: imagesURL
     };
 
-    console.log('Creating product with data:', productToCreate);
-
     const product = await Product.create(productToCreate);
 
-    cache.clear();
+    // Clear caches after adding product
+    clearProductCaches();
 
     return res.json({ 
       success: true, 
@@ -109,15 +129,25 @@ export const addProduct = async (req, res) => {
 
 export const ProductList = async (req, res) => {
   try {
-    const { page = 1, limit = 20, category, inStock, search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+    const { 
+      page = 1, 
+      limit = 20, 
+      category, 
+      inStock, 
+      search, 
+      sortBy = 'createdAt', 
+      sortOrder = 'DESC' 
+    } = req.query;
+    
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
 
+    // Simple cache key
     const cacheKey = `products:${pageNum}:${limitNum}:${category || ''}:${inStock || ''}:${search || ''}:${sortBy}:${sortOrder}`;
-    const cached = cache.get(cacheKey);
     
-    if (cached && Date.now() < cached.expires) {
-      return res.json(cached.data);
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
     const whereClause = {};
@@ -137,7 +167,6 @@ export const ProductList = async (req, res) => {
       offset: (pageNum - 1) * limitNum
     });
 
-    // Use consistent formatting helper
     const processedProducts = products.map(formatProductResponse);
 
     const responseData = { 
@@ -152,7 +181,7 @@ export const ProductList = async (req, res) => {
       }
     };
 
-    cache.set(cacheKey, { data: responseData, expires: Date.now() + CACHE_TTL });
+    setCache(cacheKey, responseData);
     return res.json(responseData);
   } catch (error) {
     console.error("Product list error:", error);
@@ -169,10 +198,9 @@ export const ProductById = async (req, res) => {
     }
 
     const cacheKey = `product:${id}`;
-    const cached = cache.get(cacheKey);
-    
-    if (cached && Date.now() < cached.expires) {
-      return res.json(cached.data);
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
     const product = await Product.findByPk(parseInt(id));
@@ -181,13 +209,12 @@ export const ProductById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // Use consistent formatting helper
     const responseData = { 
       success: true, 
       product: formatProductResponse(product)
     };
 
-    cache.set(cacheKey, { data: responseData, expires: Date.now() + CACHE_TTL });
+    setCache(cacheKey, responseData, 60 * 60 * 1000); // Cache individual products longer
     return res.json(responseData);
   } catch (error) {
     console.error("Product by ID error:", error);
@@ -198,8 +225,6 @@ export const ProductById = async (req, res) => {
 export const changeStock = async (req, res) => {
   try {
     const { id, inStock } = req.body;
-    
-    console.log('Change stock request:', { id, inStock });
     
     if (!id || inStock === undefined) {
       return res.status(400).json({ 
@@ -217,11 +242,8 @@ export const changeStock = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // Clear relevant cache
-    cache.delete(`product:${id}`);
-    for (const key of cache.keys()) {
-      if (key.startsWith('products:')) cache.delete(key);
-    }
+    // Clear caches after stock change
+    clearProductCaches();
 
     return res.json({ 
       success: true, 
@@ -244,6 +266,7 @@ export const removeProduct = async (req, res) => {
 
     await Product.destroy({ where: { id } });
 
+    // Clean up images asynchronously
     if (product.image?.length) {
       setImmediate(() => {
         product.image.forEach(async (imageUrl) => {
@@ -257,7 +280,7 @@ export const removeProduct = async (req, res) => {
       });
     }
 
-    cache.clear();
+    clearProductCaches();
     return res.json({ success: true, message: "Product removed" });
   } catch (error) {
     console.error("Remove product error:", error);
@@ -269,15 +292,15 @@ export const getProductsByCategory = async (req, res) => {
   try {
     const { category } = req.params;
     const { limit = 20, page = 1 } = req.query;
-    const cacheKey = `category:${category}:${page}:${limit}`;
     
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() < cached.expires) {
-      return res.json(cached.data);
-    }
-
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
+    
+    const cacheKey = `category:${category}:${page}:${limit}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     const { count, rows: products } = await Product.findAndCountAll({
       where: { 
@@ -289,7 +312,6 @@ export const getProductsByCategory = async (req, res) => {
       offset: (pageNum - 1) * limitNum
     });
 
-    // Use consistent formatting helper
     const processedProducts = products.map(formatProductResponse);
 
     const responseData = { 
@@ -302,11 +324,10 @@ export const getProductsByCategory = async (req, res) => {
       }
     };
 
-    cache.set(cacheKey, { data: responseData, expires: Date.now() + CACHE_TTL });
+    setCache(cacheKey, responseData);
     return res.json(responseData);
   } catch (error) {
     console.error("Products by category error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch products" });
   }
 };
-
