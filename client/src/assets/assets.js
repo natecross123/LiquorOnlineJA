@@ -71,6 +71,8 @@ import soda_assets from "./soda_asset.png";
 import beer_assets from "./beer_asset.png";
 import vodka_assets from "./vodka_asset.png";
 import LogoJA from "./LogoJA.svg";
+import Background1 from "./Background1.jpg";
+import Background2 from "./Background2.jpg";
 import { Link } from 'react-router-dom';
 
 
@@ -112,6 +114,8 @@ export const assets = {
   vodka_assets,
   beer_assets,
   LogoJA,
+  Background1,
+  Background2,
 };
 
 export const categories = [
