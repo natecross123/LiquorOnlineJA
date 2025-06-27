@@ -3,10 +3,10 @@ import { assets } from '../assets/assets'
 
 const MainBanner = () => {
   return (
-    <div className='relative'>
+    <div className='relative w-screen ml-[calc(-50vw+50%)] -mt-0'>
       {/* Background images */}
-      <img src={assets.Background1} alt="banner" className='w-[110%] hidden md:block object-cover' />
-      <img src={assets.Background2} alt="banner" className='w-[110%] md:hidden object-cover' />
+      <img src={assets.Background1} alt="banner" className='w-full hidden md:block object-cover h-96 md:h-[500px]' />
+      <img src={assets.Background2} alt="banner" className='w-full md:hidden object-cover h-96' />
       
       {/* Banner content */}
       <div className='absolute inset-0 flex flex-col items-center md:items-start justify-end md:justify-center pb-24 md:pb-0 px-4 md:pl-18 lg:pl-24'>

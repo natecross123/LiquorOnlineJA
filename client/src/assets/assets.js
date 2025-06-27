@@ -70,7 +70,7 @@ import whisky_assets from "./whisky_asset.png";
 import soda_assets from "./soda_asset.png";
 import beer_assets from "./beer_asset.png";
 import vodka_assets from "./vodka_asset.png";
-import LogoJA from "./LogoJA.svg";
+import LogoJA from "./LogoJA.png";
 import Background1 from "./Background1.jpg";
 import Background2 from "./Background2.jpg";
 import { Link } from 'react-router-dom';

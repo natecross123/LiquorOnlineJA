@@ -6,7 +6,7 @@ const Footer = () => {
         <div className="px-6 md:px-16 lg:px-24 xl:px-32 mt-24 bg-black text-white">
             <div className="flex flex-col md:flex-row items-start justify-between gap-10 py-10 border-b border-gray-100/20">
                 <div>
-                    <img className="w-34 md:w-32" src={assets.logo} alt="logo" />
+                    <img className="w-34 md:w-32" src={assets.LogoJA} alt="logo" />
                     <p className="max-w-[410px] mt-6 text-gray-300">
                         Your trusted partner for premium spirits and exceptional service. Quality you can taste, service you can trust.
                     </p>

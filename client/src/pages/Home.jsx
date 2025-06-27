@@ -14,7 +14,7 @@ const Home = () => {
   };
 
   return (
-    <div className='mt-10'>
+    <div>
       {/* Age Verification Popup */}
       <AgeVerification onVerified={handleAgeVerified} />
       
