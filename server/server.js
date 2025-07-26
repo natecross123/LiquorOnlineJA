@@ -21,7 +21,7 @@ await connectDB();
 await connectCloudinary();
 
 // Allow multiple Origins
-const allowedOrigins = ['http://localhost:5173'];
+const allowedOrigins = ['http://localhost:5173', 'https://liquor-online-ja-46sv.vercel.app'];
 
 // Middleware Config
 app.use(express.json());
