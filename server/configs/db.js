@@ -1,23 +1,20 @@
 import { Sequelize } from 'sequelize';
+import pg from 'pg';
 
-// Better connection pool settings for Neon PostgreSQL
-const sequelize = new Sequelize(process.env.DATABASE_URL || process.env.POSTGRES_URI, {
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
+  dialectModule: pg, 
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   
-  
   pool: {
-    max: 50,        // Increased from 10 - better for concurrent requests
-    min: 5,         // Keep some connections alive instead of 0
+    max: 5,        // Reduced for serverless
+    min: 0,        // No minimum connections for serverless
     acquire: 30000, 
-    idle: 10000,    // idle time
+    idle: 10000,
   },
   
   dialectOptions: {
-    ssl: process.env.NODE_ENV === 'production' ? {
-      require: true,
-      rejectUnauthorized: false
-    } : {
+    ssl: {
       require: true,
       rejectUnauthorized: false
     }
@@ -29,12 +26,14 @@ const connectDB = async () => {
     await sequelize.authenticate();
     console.log('PostgreSQL connected successfully');
     
-    // Sync all models
-    await sequelize.sync({ alter: true }); // Use { force: true } only in development to recreate tables
-    console.log('Database synchronized');
+    // Only sync in development
+    if (process.env.NODE_ENV === 'development') {
+      await sequelize.sync({ alter: true });
+      console.log('Database synchronized');
+    }
   } catch (error) {
     console.error('Unable to connect to PostgreSQL:', error);
-    process.exit(1);
+    throw error; // Don't exit in serverless
   }
 };
 
