@@ -26,3 +26,7 @@ Dashboard with store statistics
 Manage categories and inventory
 
 View and process orders
+
+Start up: 
+npm run dev 
+npm run
