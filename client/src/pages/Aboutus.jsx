@@ -75,7 +75,7 @@ const AboutUs = () => {
           <div className='grid md:grid-cols-3 gap-8'>
             <div className='text-center'>
               <div className='w-32 h-32 bg-gray-300 rounded-full mx-auto mb-4'></div>
-              <h3 className='text-xl font-semibold text-gray-900 mb-2'>Richard Lake</h3>
+              <h3 className='text-xl font-semibold text-gray-900 mb-2'>Lorem Ipsum </h3>
               <p className='text-gray-600 mb-2'>CEO & Founder</p>
               <p className='text-sm text-gray-500'>Leading our vision with passion and dedication to customer satisfaction.</p>
             </div>

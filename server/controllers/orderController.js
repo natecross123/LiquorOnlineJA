@@ -110,8 +110,17 @@ export const placeOrderStripe = async (req, res) => {
     const userId = req.userId;
     const { origin } = req.headers;
 
+    console.log('Stripe Order Request:', { userId, addressId, items, origin });
+
     if (!userId || !addressId || !Array.isArray(items) || items.length === 0) {
+      console.log('Invalid request data:', { userId, addressId, itemsLength: items?.length });
       return res.status(400).json({ success: false, message: "Invalid data" });
+    }
+
+    // Check if Stripe key is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY not configured');
+      return res.status(500).json({ success: false, message: "Payment system not configured" });
     }
 
     // Verify address
@@ -121,74 +130,139 @@ export const placeOrderStripe = async (req, res) => {
     });
 
     if (!address) {
+      console.log('Address not found:', { addressId, userId });
       return res.status(404).json({ success: false, message: "Address not found" });
     }
 
     // Batch fetch products and calculate amount (fixes N+1 problem)
     const productIds = [...new Set(items.map(item => item.product))];
+    console.log('Fetching products with IDs:', productIds);
+    
     const products = await Product.findAll({
       where: { id: { [Op.in]: productIds } },
       attributes: ['id', 'name', 'price', 'offerPrice', 'inStock']
     });
 
+    console.log('Found products:', products.length);
+
+    if (products.length !== productIds.length) {
+      console.log('Some products not found. Expected:', productIds.length, 'Found:', products.length);
+    }
+
     const productMap = new Map(products.map(p => [p.id, p]));
     let amount = 0;
     const productData = [];
+    const validatedItems = [];
     
     for (const item of items) {
-      const product = productMap.get(parseInt(item.product));
-      if (!product || !product.inStock) {
-        return res.status(400).json({ success: false, message: `Product unavailable: ${item.product}` });
+      const productId = parseInt(item.product);
+      const product = productMap.get(productId);
+      
+      if (!product) {
+        console.log('Product not found:', productId);
+        return res.status(400).json({ success: false, message: `Product not found: ${productId}` });
+      }
+      
+      if (!product.inStock) {
+        console.log('Product out of stock:', productId);
+        return res.status(400).json({ success: false, message: `Product out of stock: ${product.name}` });
       }
       
       const price = product.offerPrice || product.price;
       const quantity = parseInt(item.quantity);
       
+      if (!price || price <= 0) {
+        console.log('Invalid price for product:', productId, price);
+        return res.status(400).json({ success: false, message: `Invalid price for product: ${product.name}` });
+      }
+      
+      if (!quantity || quantity <= 0) {
+        console.log('Invalid quantity:', quantity);
+        return res.status(400).json({ success: false, message: "Invalid quantity" });
+      }
+      
       productData.push({ name: product.name, price, quantity });
+      validatedItems.push({ product: item.product, quantity, price });
       amount += price * quantity;
     }
 
     const taxAmount = Math.floor(amount * 0.15);
     const totalAmount = amount + taxAmount;
 
+    console.log('Order totals:', { amount, taxAmount, totalAmount });
+
     // Create order
     const order = await Order.create({
       userId,
-      items,
+      items: validatedItems, // Use validated items instead of original items
       amount: totalAmount,
       addressId,
       paymentType: "Online",
     });
 
+    console.log('Order created:', order.id);
+
     // Initialize Stripe
     const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
-    // Build line items
-    const line_items = productData.map((p) => ({
-      price_data: {
-        currency: "usd",
-        product_data: { name: p.name },
-        unit_amount: Math.floor(p.price + p.price * 0.02) * 100,
-      },
-      quantity: p.quantity,
-    }));
+    // Build line items - Fix potential pricing issues
+    const line_items = productData.map((p) => {
+      // Ensure price is in cents and is a valid number
+      const priceInCents = Math.round((p.price * 100)); // Remove the 2% fee for now to test
+      
+      console.log(`Product: ${p.name}, Price: ${p.price}, Price in cents: ${priceInCents}`);
+      
+      return {
+        price_data: {
+          currency: "usd", // Make sure your Stripe account supports USD
+          product_data: { 
+            name: p.name 
+          },
+          unit_amount: priceInCents,
+        },
+        quantity: p.quantity,
+      };
+    });
+
+    console.log('Stripe line items:', JSON.stringify(line_items, null, 2));
+
+    // Determine success and cancel URLs
+    const successUrl = origin ? `${origin}/loader?next=my-orders` : `${req.protocol}://${req.get('host')}/loader?next=my-orders`;
+    const cancelUrl = origin ? `${origin}/cart` : `${req.protocol}://${req.get('host')}/cart`;
+
+    console.log('Redirect URLs:', { successUrl, cancelUrl });
 
     // Create Stripe session
     const session = await stripeInstance.checkout.sessions.create({
+      payment_method_types: ['card'], // Explicitly specify payment methods
       line_items,
       mode: "payment",
-      success_url: `${origin}/loader?next=my-orders`,
-      cancel_url: `${origin}/cart`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         orderId: order.id.toString(),
-        userId,
+        userId: userId.toString(),
       },
     });
+
+    console.log('Stripe session created:', session.id);
 
     return res.json({ success: true, url: session.url });
   } catch (error) {
     console.error("Stripe Order error:", error);
-    return res.status(500).json({ success: false, message: "Failed to create payment" });
+    
+    // More detailed error logging
+    if (error.type) {
+      console.error("Stripe error type:", error.type);
+      console.error("Stripe error message:", error.message);
+      console.error("Stripe error code:", error.code);
+    }
+    
+    return res.status(500).json({ 
+      success: false, 
+      message: "Failed to create payment",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

@@ -6,7 +6,7 @@ import {
     getAllOrders,
     updateOrderStatus,
     stripeWebhooks
-} from '../controllers/orderController.js';
+} from '../controllers/orderController.js'; 
 import authUser from '../middlewares/authUser.js';
 
 const orderRouter = express.Router();

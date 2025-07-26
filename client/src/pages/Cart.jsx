@@ -76,7 +76,7 @@ const Cart = () => {
             toast.error(error.response?.data?.message || error.message || 'Failed to fetch addresses');
         }
     };
-
+    // Place Order function 
     const placeOrder = async () => {
         try {
             if (!selectedAddress) {
@@ -114,7 +114,7 @@ const Cart = () => {
                     toast.error(data.message);
                 }
             }
-            // Handle Online Payment
+            // Handle Online Payment STRIPE
             else if (paymentOption === "Online") {
                 const orderData = {
                     items: cartArray.map(item => ({
