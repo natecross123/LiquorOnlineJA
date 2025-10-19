@@ -15,7 +15,7 @@ const Product = sequelize.define('Product', {
                 msg: 'Product name is required'
             },
             len: {
-                args: [1, 255],
+                args: [1, 255], 
                 msg: 'Product name must be between 1 and 255 characters'
             }
         }

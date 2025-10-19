@@ -18,7 +18,7 @@ const Order = sequelize.define('Order', {
         },  
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
-    },
+    },  
     items: {
         type: DataTypes.JSON,
         allowNull: false,

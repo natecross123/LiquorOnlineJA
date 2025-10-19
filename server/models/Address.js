@@ -15,7 +15,7 @@ const Address = sequelize.define('Address', {
       model: User,
       key: 'id'
     },
-    onDelete: 'CASCADE',
+    onDelete: 'CASCADE',  
     onUpdate: 'CASCADE'
   },
   firstName: {
